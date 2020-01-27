@@ -37,6 +37,7 @@ class GoogleMaps:
 
             result = {
                 'id': item.get('place_id', ''),
+                'site': helpers.getDomainName(self.url),
                 'name': name,
                 'email': '',
                 'phone': phone,
@@ -143,5 +144,6 @@ class GoogleMaps:
             input("Press enter to exit...")
             exit()
         
+        self.url = 'https://maps.google.com'
         self.api = Api('https://maps.googleapis.com')
         self.api.headers = {}

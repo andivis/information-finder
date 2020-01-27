@@ -170,7 +170,7 @@ class LinkedIn:
         keyword = item.get('keyword', '')
 
         # profile
-        if keyword.startswith('https://www.linkedin.com/in/'):
+        if self.isProfileUrl(item):
             results = self.getProfileInformation(keyword)
         # search term
         else:
@@ -180,7 +180,8 @@ class LinkedIn:
 
             results = self.getSearchResults(item, query)
 
-        results = self.addContactInformation(item, results)
+        if self.useSalesql:
+            results = self.addContactInformation(item, results)
 
         return results
 
@@ -199,6 +200,7 @@ class LinkedIn:
 
         newItem = {
             'id': profileId,
+            'site': helpers.getDomainName(self.url),
             'linkedin url': 'https://www.linkedin.com/in/' + profileId + '/',
             'urn': urn,
             'positions': [],
@@ -300,6 +302,7 @@ class LinkedIn:
             return result
 
         result['id'] = universalName
+        result['site'] = helpers.getDomainName(self.url)
 
         import urllib
         suffix = urllib.parse.quote_plus(universalName);
@@ -481,6 +484,7 @@ class LinkedIn:
 
                     newItem = {
                         'id': helpers.findBetween(url, '/in/', '/'),
+                        'site': helpers.getDomainName(self.url),
                         'url': url,
                         'urn': urn,
                         'name': helpers.getNested(item, ['title', 'text'])
@@ -535,7 +539,7 @@ class LinkedIn:
     def inDatabase(self, id):
         result = False
         
-        site = helpers.getDomainName(self.api.urlPrefix)
+        site = helpers.getDomainName(self.url)
         
         row = self.database.getFirst('result', 'id', f"site = '{site}' and id = '{id}'", '', '')
 
@@ -548,11 +552,13 @@ class LinkedIn:
     def isProfileUrl(self, item):
         return get(item, 'keyword').startswith('https://www.linkedin.com/in/')
 
-    def __init__(self, options, database):
+    def __init__(self, options, useSalesql, database):
         self.options = options
-        self.database = database
+        self.useSalesql = useSalesql
+        self.database = database        
         
-        self.api = Api('https://www.linkedin.com')
+        self.url = 'https://www.linkedin.com'
+        self.api = Api(self.url)
 
         if self.options.get('proxy', ''):
             self.api.proxies = {

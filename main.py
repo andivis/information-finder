@@ -25,19 +25,10 @@ class Main:
         self.cleanUp()
 
     def doItem(self, inputRow):
-        newItems = self.informationFinder.run(inputRow)
-
-        self.output(newItems)
-
-    def output(self, newItems):
-        for newItem in newItems:
-            outputFile = os.path.join(self.outputDirectory, 'output.csv')
-            
-            line = self.informationFinder.getAsLine(newItem)
-            helpers.appendCsvFile(line, outputFile)
+        newItems = self.informationFinder.run(inputRow, self.outputDirectory)
 
     def showStatus(self, fileIndex, i, inputRow):
-        keyword = get(inputRow, 'keyword or url')
+        keyword = get(inputRow, 'keyword')
         logging.info(f'File {fileIndex + 1} of {len(self.inputFiles)}: {helpers.fileNameOnly(self.inputFile)}. Item {i + 1} of {len(self.inputRows)}: {keyword}.')
 
     def cleanUp(self):
@@ -56,9 +47,24 @@ class Main:
             self.inputFiles.append(os.path.join(self.inputDirectory, file))
 
         self.options = {
+            'maximumSearchResults': 100,
+            'maximumNewResults': 25,
+            'secondsBetweenKeywords': 10,
+            'hoursBetweenRuns': 12,
+            'restartSearch': 0,
+            'maximumDaysToKeepItems': 180,
+            'sites': 'linkedin.com maps.google.com'
         }
 
+        if '--debug' in sys.argv:
+            self.options['maximumSearchResults'] = 25
+            self.options['maximumNewResults'] = 3
+            self.options['secondsBetweenKeywords'] = 1
+
         self.database = Database('user-data/database.sqlite')
+
+        self.database.execute('create table if not exists result ( site text, keyword text, id text, name text, email text, phone text, destinations text, gmDate text, json text, primary key(site, id) )')
+        self.database.execute('create table if not exists history ( id integer primary key, keyword text, resultsFound integer, maximumNewResults integer, status text, gmDate text )')
 
         self.informationFinder = InformationFinder(self.options, self.database)
 
