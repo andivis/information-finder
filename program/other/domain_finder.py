@@ -234,7 +234,7 @@ class DomainFinder:
 
         self.increaseConfidence(score, 175, 'The domain from Google matches the domain from another service.', 'check')
 
-    def checkExternalDomains(self, domain, basicName, mode=''):
+    def checkExternalDomains(self, domain, basicName, parameters={}):
         results = {}
 
         # does the company have social media pages?
@@ -245,10 +245,19 @@ class DomainFinder:
         ]
         
         for externalDomain in externalDomains:
-            matchingUrl = self.checkExternalDomain(externalDomain, basicName, domain, mode)
+            matchingUrl = self.checkExternalDomain(externalDomain, basicName, domain, parameters)
+
+            if not matchingUrl:
+                continue
 
             matchingUrl = helpers.findBetween(matchingUrl, '', '/?')
             matchingUrl = helpers.findBetween(matchingUrl, '', '?')
+
+            # remove subdirectories
+            index = helpers.findnth(matchingUrl, '/', 3)
+
+            if index >= 0:
+                matchingUrl = matchingUrl[0:index + 1]
             
             results[externalDomain] = matchingUrl
 
@@ -345,7 +354,7 @@ class DomainFinder:
     def insert(self, string, index, toInsert):
         return string[:index] + toInsert + string[index:]
 
-    def checkExternalDomain(self, domain, basicName, urlToFind, mode=''):
+    def checkExternalDomain(self, domain, basicName, urlToFind, parameters={}):
         score = 0
         numberOfResults = 3
 
@@ -354,7 +363,7 @@ class DomainFinder:
         if '--debug' in sys.argv:
             numberOfResults = 2
 
-        urls = self.search(f'site:{domain} {basicName}', numberOfResults, True)
+        urls = self.search(f'site:{domain} {basicName}{get(parameters, "partOfQuery")}', numberOfResults, True)
 
         matchingUrl = ''
 
@@ -365,17 +374,14 @@ class DomainFinder:
 
             self.api.proxies = self.getRandomProxy()
 
-            # match .xyz.com /xyz.com but not gxyz.com
-            expression = '[">/\.]' + re.escape(urlToFind)
-
-            if self.urlContainsText(url, urlToFind, expression):
+            if self.urlContainsText(url, urlToFind, basicName):
                 matchingUrl = url
                 score = 300
                 break
 
         message = f'The company\'s page on {domain} seems to be {matchingUrl} and it contains {urlToFind}.'
 
-        if mode == 'return list':
+        if parameters:
             if matchingUrl:
                 logging.info(message)
             
@@ -409,14 +415,15 @@ class DomainFinder:
 
         self.increaseConfidence(score, 300, f'The whois record for {domain} contains {filteredName}.', 'whois')
 
-    def urlContainsText(self, url, text, expression):
+    def urlContainsText(self, url, text, titleMustContain):
         page = self.api.getPlain(url)
         page = page.lower()
 
-        if expression:
-            match = re.search(expression, page)
+        if titleMustContain:
+            title = helpers.findBetween(page, '<title', '</title>')
 
-            return match != None
+            if not titleMustContain in title:
+                return False
 
         return text in page
 

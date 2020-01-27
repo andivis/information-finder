@@ -143,6 +143,11 @@ def findBetween(s, first, last):
 
     return s[start:end]
 
+def findnth(string, substring, n):
+    parts = string.split(substring, n + 1)
+    if len(parts) <= n + 1:
+        return -1
+    return len(string) - len(parts[-1]) - len(substring)
 
 def replaceBetweenAll(s, first, last, replacement):
     import re

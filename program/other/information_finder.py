@@ -29,6 +29,8 @@ class InformationFinder:
         self.markDone(inputRow, newItems)
 
     def addGoogleInformation(self, newItems):
+        import re
+        
         logging.info('Adding information from company websites')
 
         for i, newItem in enumerate(newItems):
@@ -40,9 +42,15 @@ class InformationFinder:
                     continue
 
                 domain = helpers.getDomainName(get(company, 'website'))
+
+                basicCompanyName = self.getBasicCompanyName(get(company, 'name'))
                 
+                parameters ={
+                    'partOfQuery': ' ' + get(company, 'website'),
+                }
+
                 # want social media page to contain the website
-                googleResult = self.domainFinder.checkExternalDomains(domain, domain, mode='return list')
+                googleResult = self.domainFinder.checkExternalDomains(domain, basicCompanyName, parameters)
 
                 for key in googleResult:
                     if not googleResult[key]:
