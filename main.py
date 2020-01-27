@@ -25,7 +25,7 @@ class Main:
         self.cleanUp()
 
     def doItem(self, inputRow):
-        newItems = self.informationFinder.run(inputRow, self.outputDirectory)
+        self.informationFinder.run(inputRow, self.outputDirectory)
 
     def showStatus(self, fileIndex, i, inputRow):
         keyword = get(inputRow, 'keyword')
@@ -63,8 +63,8 @@ class Main:
 
         self.database = Database('user-data/database.sqlite')
 
-        self.database.execute('create table if not exists result ( site text, keyword text, id text, name text, email text, phone text, destinations text, gmDate text, json text, primary key(site, id) )')
-        self.database.execute('create table if not exists history ( id integer primary key, keyword text, resultsFound integer, maximumNewResults integer, status text, gmDate text )')
+        self.database.execute('create table if not exists result ( site text, keyword text, id text, name text, gmDate text, json text, primary key(site, id) )')
+        self.database.execute('create table if not exists history ( id integer primary key, keyword text, resultsFound integer, maximumNewResults integer, gmDate text )')
 
         self.informationFinder = InformationFinder(self.options, self.database)
 

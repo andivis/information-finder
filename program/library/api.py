@@ -150,7 +150,7 @@ class Api:
 
         file = helpers.getFile('user-data/logs/cache.txt')
 
-        urlToFind = url
+        urlToFind = self.urlPrefix + url
        
         if parameters:
             urlToFind += '?' + urllib.parse.urlencode(parameters)

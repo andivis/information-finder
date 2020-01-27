@@ -43,7 +43,8 @@ class GoogleMaps:
                 'phone': phone,
                 'job title': '',
                 'company': '',
-                'url': details.get('website', '')
+                'url': details.get('website', ''),
+                'googleMapsUrl': 'https://www.google.com/maps/place/?q=place_id:' + item.get('place_id', '')
             }
 
             results.append(result)

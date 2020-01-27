@@ -164,7 +164,7 @@ class SalesQl:
         self.api.proxies = proxies
 
 class LinkedIn:
-    def search(self, item):
+    def search(self, item, getProfileInformation=False):
         results = []
 
         keyword = item.get('keyword', '')
@@ -180,10 +180,31 @@ class LinkedIn:
 
             results = self.getSearchResults(item, query)
 
+            if getProfileInformation:
+                results = self.addProfileInformationToList(item, results)
+
         if self.useSalesql:
             results = self.addContactInformation(item, results)
 
         return results
+
+    def addProfileInformationToList(self, searchItem, list):
+        newResults = []
+
+        for listItem in list:
+            profiles = self.getProfileInformation(listItem.get('url', ''))
+
+            if profiles:
+                newResults.append(profiles[0])
+
+            maximum = searchItem.get('maximumNewResults', self.options['maximumNewResults'])
+            maximum = int(maximum)
+
+            if len(newResults) >= maximum:
+                logging.info(f'Stopping for this keyword. Got {len(newResults)} results.')
+                break
+
+        return newResults
 
     def getProfileInformation(self, keyword):
         results = []
@@ -191,7 +212,7 @@ class LinkedIn:
         profileId = helpers.findBetween(keyword, 'https://www.linkedin.com/in/', '/')
 
         if self.inDatabase(profileId):
-            return
+            return results
 
         j = self.api.get(f'/voyager/api/identity/profiles/{profileId}/profileView')            
 
@@ -354,6 +375,9 @@ class LinkedIn:
             startYear = get(position, 'startYear')
             endYear = get(position, 'endYear')
 
+            if not endYear:
+                endYear = 'present'
+
             s = f'{title} at {company} ({startYear} to {endYear})'
 
             values.append(s)
@@ -385,6 +409,8 @@ class LinkedIn:
         # prefer these fields if available
         if get(item, 'firstName'):
             result = get(item, 'firstName') + ' ' + get(item, 'lastName')
+        elif get(item, 'first name'):
+            result = get(item, 'first name') + ' ' + get(item, 'last name')
 
         return result
 
@@ -425,7 +451,7 @@ class LinkedIn:
             maximum = int(maximum)
 
             if len(newResults) >= maximum:
-                logging.info(f'Stopping for this keyword. Got {len(newResults)} new results.')
+                logging.info(f'Stopping for this keyword. Got {len(newResults)} results.')
                 break
 
         return newResults
@@ -505,7 +531,7 @@ class LinkedIn:
 
             logging.info(f'Found {onSearchResultIndex} search results so far')
             
-            if anyResultsForThisPage:
+            if not anyResultsForThisPage:
                 logging.info('Stopping search. No search results on this page.')
                 break
             

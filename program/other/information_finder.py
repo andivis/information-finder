@@ -15,12 +15,47 @@ from ..library.google_maps import GoogleMaps
 
 class InformationFinder:
     def run(self, inputRow, outputDirectory):
-        newItems = self.linkedIn.search(inputRow)
+        newItems = self.linkedIn.search(inputRow, getProfileInformation=True)
 
-        for newItem in newItems:
+        newItems = self.addGoogleMapsInformation(newItems)
+
+        for i, newItem in enumerate(newItems):
+            logging.info(f'Result {i + 1} of {len(newItems)}. Site: {get(newItem, "site")}. Keyword: {get(inputRow, "keyword")}. Name: {self.linkedIn.getName(newItem)}.')
             self.output(inputRow, newItem, outputDirectory)
 
         self.markDone(inputRow, newItems)
+
+    def addGoogleMapsInformation(self, newItems):
+        logging.info('Adding information from Google Maps')
+
+        for i, newItem in enumerate(newItems):
+            for j, company in enumerate(get(newItem, 'companies')):
+                logging.info(f'Item {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}.')
+
+                fields = ['city', 'region', 'country']
+
+                values = []
+
+                for field in fields:
+                    values.append(get(company, field))
+
+                keyword = ', '.join(values)
+                keyword = get(company, 'name') + ' ' + keyword
+
+                googleMapSearchItem = {
+                    'keyword': keyword
+                }
+
+                googleMapResult = self.googleMaps.search(googleMapSearchItem)
+
+                toMerge = ['phone', 'googleMapsUrl']
+
+                # add if doesn't exist
+                for field in toMerge:
+                    if not get(company, field):
+                        company[field] = googleMapResult[field]
+
+        return newItems
 
     def output(self, inputRow, newItem, outputDirectory):
         self.toDatabase(inputRow, newItem)
@@ -32,14 +67,13 @@ class InformationFinder:
 
         fields = ['site', 'keyword', 'first name', 'last name', 'email', 'phone', 'headline', 'job title', 'company', 'summary', 'industry', 'location', 'country', 'positions', 'school', 'field of study', 'id', 'linkedin url']
 
-        # output to companies.csv too?
-        if self.linkedIn.isProfileUrl(inputRow):            
-            companyFields = ['site', 'keyword', 'name', 'website', 'city', 'region', 'country', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url']
+        # output to companies.csv too
+        companyFields = ['site', 'keyword', 'name', 'website', 'city', 'region', 'country', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url']
 
-            companiesOutputFile = os.path.join(outputDirectory, 'companies.csv')
+        companiesOutputFile = os.path.join(outputDirectory, 'companies.csv')
 
-            for company in get(newItem, 'companies'):
-                self.toCsvFile(inputRow, company, companyFields, companiesOutputFile)
+        for company in get(newItem, 'companies'):
+            self.toCsvFile(inputRow, company, companyFields, companiesOutputFile)
 
         outputFile = os.path.join(outputDirectory, 'output.csv')
 
@@ -79,10 +113,7 @@ class InformationFinder:
             'site': newItem.get('site', ''),
             'keyword': inputRow.get('keyword', ''),
             'id': newItem.get('id', ''),
-            'name': newItem.get('name', ''),
-            'email': newItem.get('email', ''),
-            'phone': newItem.get('phone', ''),
-            'destinations': inputRow.get('destinations', ''),
+            'name': self.linkedIn.getName(newItem),
             'gmDate': str(datetime.datetime.utcnow()),
             'json': json.dumps(newItem)
         }
@@ -120,7 +151,7 @@ class InformationFinder:
             'keyword': inputRow.get('keyword', ''),
             'resultsFound': len(newItems),
             'maximumNewResults': self.options['maximumNewResults'],
-            'gmDate': datetime.datetime.utcnow()
+            'gmDate': str(datetime.datetime.utcnow())
         }
 
         self.database.insert('history', history)
@@ -143,4 +174,4 @@ class InformationFinder:
         self.linkedIn = LinkedIn(self.options, False, self.database)
         self.googleMaps = GoogleMaps(self.options, self.credentials, self.database)
 
-        self.database.removeOldEntries()
+        self.removeOldEntries()
