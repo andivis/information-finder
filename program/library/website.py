@@ -1,7 +1,9 @@
 import logging
 import random
+
 from collections import OrderedDict
-import helpers
+
+from . import helpers
 
 class Website:
     def getXpath(self, page, xpath, firstOnly=False, attribute=None):

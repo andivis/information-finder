@@ -9,6 +9,8 @@ import lxml.html as lh
 
 from ..library import helpers
 
+from . domain_finder import DomainFinder
+
 from ..library.helpers import get
 from ..library.work import LinkedIn
 from ..library.google_maps import GoogleMaps
@@ -18,6 +20,7 @@ class InformationFinder:
         newItems = self.linkedIn.search(inputRow, getProfileInformation=True)
 
         newItems = self.addGoogleMapsInformation(newItems)
+        newItems = self.addGoogleInformation(newItems)
 
         for i, newItem in enumerate(newItems):
             logging.info(f'Result {i + 1} of {len(newItems)}. Site: {get(newItem, "site")}. Keyword: {get(inputRow, "keyword")}. Name: {self.linkedIn.getName(newItem)}.')
@@ -25,12 +28,38 @@ class InformationFinder:
 
         self.markDone(inputRow, newItems)
 
+    def addGoogleInformation(self, newItems):
+        logging.info('Adding information from company websites')
+
+        for i, newItem in enumerate(newItems):
+            for j, company in enumerate(get(newItem, 'companies')):
+                logging.info(f'Item {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}: {get(company, "name")}')
+
+                if not get(company, 'website'):
+                    logging.debug('Skipping. No website.')
+                    continue
+
+                domain = helpers.getDomainName(get(company, 'website'))
+                
+                # want social media page to contain the website
+                googleResult = self.domainFinder.checkExternalDomains(domain, domain, mode='return list')
+
+                for key in googleResult:
+                    if not googleResult[key]:
+                        continue
+
+                    nameToUse = helpers.findBetween(key, '', '.')
+
+                    newItem[nameToUse] = googleResult[key]
+
+        return newItems
+
     def addGoogleMapsInformation(self, newItems):
         logging.info('Adding information from Google Maps')
 
         for i, newItem in enumerate(newItems):
             for j, company in enumerate(get(newItem, 'companies')):
-                logging.info(f'Item {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}.')
+                logging.info(f'Item {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}: {get(company, "name")}')
 
                 fields = ['city', 'region', 'country']
 
@@ -91,7 +120,7 @@ class InformationFinder:
         fields = ['site', 'keyword', 'first name', 'last name', 'email', 'phone', 'headline', 'job title', 'company', 'summary', 'industry', 'location', 'country', 'positions', 'school', 'field of study', 'id', 'linkedin url']
 
         # output to companies.csv too
-        companyFields = ['site', 'keyword', 'name', 'website', 'city', 'region', 'country', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url']
+        companyFields = ['site', 'keyword', 'name', 'website', 'phone', 'city', 'region', 'country', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url', 'facebook', 'twitter', 'instagram']
 
         companiesOutputFile = os.path.join(outputDirectory, 'companies.csv')
 
@@ -238,5 +267,6 @@ class InformationFinder:
 
         self.linkedIn = LinkedIn(self.options, False, self.database)
         self.googleMaps = GoogleMaps(self.options, self.credentials, self.database)
+        self.domainFinder = DomainFinder(self.options)
 
         self.removeOldEntries()

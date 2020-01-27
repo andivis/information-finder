@@ -24,7 +24,7 @@ class Google:
         page = self.api.get('/search', parameters, False)
 
         if '--debug' in sys.argv:
-            helpers.toFile(page, 'logs/page.html')
+            helpers.toFile(page, 'user-data/logs/page.html')
 
         result = self.getSearchResults(page, query, numberOfResults, acceptAll)
 
@@ -142,3 +142,5 @@ class Google:
         self.avoidDomains = []
         self.userAvoidPatterns = []
         self.userAvoidDomains = []
+
+        self.api.setHeadersFromHarFile('program/resources/headers.txt', '')

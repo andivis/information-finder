@@ -53,8 +53,14 @@ class Main:
             'hoursBetweenRuns': 12,
             'restartSearch': 0,
             'maximumDaysToKeepItems': 180,
-            'sites': 'linkedin.com maps.google.com'
+            'defaultSearchUrl': 'https://www.google.com',
+            'ignorePatterns': '',
+            'ignoreDomains': '',
+            'sites': 'linkedin.com maps.google.com',
+            'proxyListUrl': helpers.getFile('program/resources/resource')
         }
+
+        helpers.setOptions('user-data/options.ini', self.options)
 
         if '--debug' in sys.argv:
             self.options['maximumSearchResults'] = 25

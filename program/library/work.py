@@ -295,6 +295,9 @@ class LinkedIn:
         for position in get(newItem, 'positions'):
             company = self.getCompanyInformation(j, get(position, 'companyUrn'))
         
+            if not newItem['companies']:
+                newItem['companies'] = []
+
             newItem['companies'] = self.addIfNotExists(newItem['companies'], company, 'universalName')
 
             position['company id'] = get(company, 'id')

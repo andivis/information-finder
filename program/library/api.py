@@ -9,6 +9,8 @@ from collections import OrderedDict
 
 from . import helpers
 
+from .helpers import get
+
 class Api:
     def get(self, url, parameters=None, responseIsJson=True):
         import requests
@@ -214,35 +216,47 @@ class Api:
 
         return result
 
-    def setHeadersFromHarFile(self, harFileName, urlMustContain):
+    def setHeadersFromHarFile(self, fileName, urlMustContain):
         try:
-            from haralyzer import HarParser
-        
-            file = helpers.getFile(harFileName)
+            from pathlib import Path
+            
+            headersList = []
+            
+            if Path(fileName).suffix == '.har':
+                from haralyzer import HarParser
+            
+                file = helpers.getFile(fileName)
 
-            j = json.loads(file)
+                j = json.loads(file)
 
-            har_page = HarParser(har_data=j)
+                har_page = HarParser(har_data=j)
+
+                # find the right url
+                for page in har_page.pages:
+                    for entry in page.entries:
+                        if urlMustContain in entry['request']['url']:
+                            headersList = entry['request']['headers']
+                            break
+
+            else:
+                headersList = helpers.getJsonFile(fileName)
+                headersList = get(headersList, 'headers')
 
             headers = []
 
-            # find the right url
-            for page in har_page.pages:
-                for entry in page.entries:
-                    if urlMustContain in entry['request']['url']:
-                        for header in entry['request']['headers']:
-                            name = header.get('name', '')
+            for header in headersList:
+                name = header.get('name', '')
 
-                            # ignore pseudo-headers
-                            if name.startswith(':'):
-                                continue
+                # ignore pseudo-headers
+                if name.startswith(':'):
+                    continue
 
-                            if name.lower() == 'content-length' or name.lower() == 'host':
-                                continue
+                if name.lower() == 'content-length' or name.lower() == 'host':
+                    continue
 
-                            newHeader = (name, header.get('value', ''))
+                newHeader = (name, header.get('value', ''))
 
-                            headers.append(newHeader)
+                headers.append(newHeader)
 
             self.headers = OrderedDict(headers)
         
