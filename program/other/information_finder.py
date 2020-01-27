@@ -46,14 +46,37 @@ class InformationFinder:
                     'keyword': keyword
                 }
 
-                googleMapResult = self.googleMaps.search(googleMapSearchItem)
+                googleMapResults = self.googleMaps.search(googleMapSearchItem)
 
-                toMerge = ['phone', 'googleMapsUrl']
+                existingCompanyName = self.getBasicCompanyName(get(company, 'name'))
+                
+                resultToUse = None
+
+                for googleMapResult in googleMapResults:
+                    companyNameFromGoogleMaps = self.getBasicCompanyName(get(googleMapResult, 'name'))
+
+                    if companyNameFromGoogleMaps == existingCompanyName:
+                        resultToUse = googleMapResult
+                        break
+
+                if not resultToUse:
+                    logging.info(f'No matches on Google Maps for {get(company, "name")}')
+                    continue
+
+                logging.info(f'Found matching result on Google Maps: {get(googleMapResult, "name")}')
+
+                toMerge = ['phone', 'url', 'google maps url']
 
                 # add if doesn't exist
                 for field in toMerge:
-                    if not get(company, field):
-                        company[field] = googleMapResult[field]
+                    nameToUse = field
+
+                    if field == 'url':
+                        nameToUse = 'website'
+
+                    if not get(company, nameToUse):
+                        logging.info(f'Adding {nameToUse} from Google Maps: {get(googleMapResult, field)}')
+                        company[nameToUse] = get(googleMapResult, field)
 
         return newItems
 
@@ -68,7 +91,7 @@ class InformationFinder:
         fields = ['site', 'keyword', 'first name', 'last name', 'email', 'phone', 'headline', 'job title', 'company', 'summary', 'industry', 'location', 'country', 'positions', 'school', 'field of study', 'id', 'linkedin url']
 
         # output to companies.csv too
-        companyFields = ['site', 'keyword', 'name', 'website', 'city', 'region', 'country', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url']
+        companyFields = ['site', 'keyword', 'name', 'website', 'city', 'region', 'country', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url']
 
         companiesOutputFile = os.path.join(outputDirectory, 'companies.csv')
 
@@ -156,6 +179,48 @@ class InformationFinder:
 
         self.database.insert('history', history)
     
+    def getFuzzyVersion(self, s):
+        result = s.lower()
+        result = result.strip()
+        return helpers.squeezeWhitespace(result)
+
+    def getBasicCompanyName(self, s):
+        import re
+
+        # description or extraneous information usually comes after
+        s = helpers.findBetween(s, '|', '')
+        s = helpers.findBetween(s, ' - ', '')
+        s = helpers.findBetween(s, ',', '')
+        s = helpers.findBetween(s, '(', '')
+
+        s = s.replace('-', ' ')
+        s = s.replace('&', ' ')
+
+        s = helpers.lettersNumbersAndSpacesOnly(s)
+        s = self.getFuzzyVersion(s)
+
+        stringsToIgnore = [
+            'limited',
+            'ltd',
+            'llc',
+            'inc',
+            'pty',
+            'pl',
+            'co',
+            'corp'
+            'incorporated'
+        ]
+
+        for string in stringsToIgnore:
+            # word with space before and after
+            s = re.sub(f' {string} ', ' ', s)
+            # ends in the string
+            s = re.sub(f' {string}$', '', s)
+
+        s = self.getFuzzyVersion(s)
+
+        return s
+
     def removeOldEntries(self):
         maximumDaysToKeepItems = self.options['maximumDaysToKeepItems']
 
