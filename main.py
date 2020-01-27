@@ -1,16 +1,15 @@
 import os
 import sys
-
-if os.path.isdir('library'):
-    sys.path.insert(0, os.getcwd() + '/library')
-
 import logging
+
+if os.path.isdir('program/library'):
+    sys.path.insert(0, os.getcwd() + '/program/library')
 
 import helpers
 
-from helpers import get
-from database import Database
-from other.information_finder import InformationFinder
+from program.library.helpers import get
+from program.library.database import Database
+from program.other.information_finder import InformationFinder
 
 class Main:
     def run(self):
@@ -52,17 +51,19 @@ class Main:
         
         logging.info('Starting')
 
+        self.inputDirectory = 'user-data/input'
+        self.outputDirectory = 'user-data/output'
         self.inputFiles = []
         
-        for file in os.listdir('input'):
-            self.inputFiles.append(os.path.join('input', file))
+        for file in os.listdir(self.inputDirectory):
+            self.inputFiles.append(os.path.join(self.inputDirectory, file))
 
         self.options = {
         }
 
-        self.outputDirectory = 'output'
+        self.database = Database('user-data/database.sqlite')
 
-        self.informationFinder = InformationFinder()
+        self.informationFinder = InformationFinder(self.options, self.database)
 
 main = Main()
 main.run()

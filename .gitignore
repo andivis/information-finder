@@ -1,6 +1,7 @@
 /.vscode
 /.vs
-/logs
+/user-data/logs
+/user-data/credentials
 
 *.sln
 *.pyproj
