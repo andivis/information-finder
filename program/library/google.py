@@ -2,13 +2,10 @@ import logging
 import sys
 import lxml.html as lh
 
-if not '../library' in sys.path:
-    sys.path.insert(0, '../library')
+from . import helpers
 
-import helpers
-
-from api import Api
-from website import Website
+from .api import Api
+from .website import Website
 
 class Google:
     def search(self, query, numberOfResults, urlPrefix=None, acceptAll=False):

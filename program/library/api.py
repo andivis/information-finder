@@ -4,8 +4,10 @@ import os.path
 import random
 import json
 import urllib.parse
+
 from collections import OrderedDict
-import helpers
+
+from . import helpers
 
 class Api:
     def get(self, url, parameters=None, responseIsJson=True):
@@ -129,9 +131,9 @@ class Api:
         else:
             number = '{:02d}'.format(self.requestIndex)
             
-            helpers.makeDirectory('logs/cache')
+            helpers.makeDirectory('user-data/logs/cache')
 
-            fileName = f'logs/cache/{helpers.lettersAndNumbersOnly(self.urlPrefix)}-{number}.json'
+            fileName = f'user-data/logs/cache/{helpers.lettersAndNumbersOnly(self.urlPrefix)}-{number}.json'
             
             self.requestIndex += 1;
 
@@ -144,7 +146,7 @@ class Api:
     def getCacheFileName(self, url, parameters, responseIsJson):
         result = ''
 
-        file = helpers.getFile('logs/cache.txt')
+        file = helpers.getFile('user-data/logs/cache.txt')
 
         urlToFind = url
        
@@ -171,9 +173,9 @@ class Api:
             if not responseIsJson:
                 extension = 'html'
 
-            result = f'logs/cache/{fileName}.{extension}'
+            result = f'user-data/logs/cache/{fileName}.{extension}'
 
-        helpers.makeDirectory('logs/cache')
+        helpers.makeDirectory('user-data/logs/cache')
 
         return result
 

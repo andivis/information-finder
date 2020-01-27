@@ -456,7 +456,7 @@ def addToStartup(fileName):
         file.write(r'start /min %s' % startupScriptFileName)
 
 
-def setUpLogging(fileNameSuffix='', useDatabase=False):
+def setUpLogging(directory='logs', fileNameSuffix='', useDatabase=False):
     import logging
     import logging.handlers
 
@@ -473,9 +473,9 @@ def setUpLogging(fileNameSuffix='', useDatabase=False):
     stream_handler.setLevel(logging.INFO)
     stream_handler.setFormatter(formatter)
 
-    logFileName = os.path.join('logs', f'log{fileNameSuffix}.txt')
+    logFileName = os.path.join(directory, f'log{fileNameSuffix}.txt')
 
-    makeDirectory(os.path.dirname(logFileName))
+    makeDirectory(directory)
 
     if '--debug' in sys.argv:
         # clear the file
@@ -486,9 +486,9 @@ def setUpLogging(fileNameSuffix='', useDatabase=False):
     file_handler.setLevel(logging.DEBUG)
 
     if useDatabase:
-        from sqlite_handler import SQLiteHandler
+        from .sqlite_handler import SQLiteHandler
 
-        sqliteHandler = SQLiteHandler('resources/database.sqlite')
+        sqliteHandler = SQLiteHandler('user-data/database.sqlite')
         sqliteHandler.setLevel(logging.INFO)
 
         logger.addHandler(sqliteHandler)

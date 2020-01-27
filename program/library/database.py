@@ -1,12 +1,13 @@
+import os
+import sys
 import sqlite3
 import logging
 import time
 import random
 
-import helpers
+from . import helpers
 
-from helpers import get
-
+from ..library.helpers import get
 
 class Database:
     def execute(self, statement):

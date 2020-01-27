@@ -5,14 +5,11 @@ import logging
 # pip packages
 import lxml.html as lh
 
-if os.path.isdir('program/library'):
-    sys.path.insert(0, os.getcwd() + 'program/library')
+from ..library import helpers
 
-import helpers
-
-from helpers import get
-from work import LinkedIn
-from google_maps import GoogleMaps
+from ..library.helpers import get
+from ..library.work import LinkedIn
+from ..library.google_maps import GoogleMaps
 
 class InformationFinder:
     def run(self, inputRow):

@@ -2,10 +2,7 @@ import os
 import sys
 import logging
 
-if os.path.isdir('program/library'):
-    sys.path.insert(0, os.getcwd() + '/program/library')
-
-import helpers
+import program.library.helpers as helpers
 
 from program.library.helpers import get
 from program.library.database import Database
@@ -47,7 +44,7 @@ class Main:
         logging.info('Done')
 
     def __init__(self):
-        helpers.setUpLogging()
+        helpers.setUpLogging('user-data/logs')
         
         logging.info('Starting')
 

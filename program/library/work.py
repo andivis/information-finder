@@ -3,13 +3,10 @@ import logging
 import random
 import time
 
-if not '../library' in sys.path:
-    sys.path.insert(0, '../library')
+from . import helpers
 
-import helpers
-
-from helpers import get
-from api import Api
+from ..library.helpers import get
+from ..library.api import Api
 
 class SalesQl:
     def search(self, item):

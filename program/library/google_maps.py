@@ -2,13 +2,10 @@ import sys
 import logging
 import time
 
-if not '../library' in sys.path:
-    sys.path.insert(0, '../library')
+from . import helpers
 
-import helpers
-
-from helpers import get
-from api import Api
+from .helpers import get
+from .api import Api
 
 class GoogleMaps:
     def search(self, searchItem):
