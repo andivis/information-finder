@@ -10,26 +10,39 @@ import helpers
 
 from helpers import get
 from database import Database
+from other.information_finder import InformationFinder
 
 class Main:
     def run(self):
         for fileIndex, inputFile in enumerate(self.inputFiles):
             self.inputFile = inputFile
 
-            self.items = self.items = helpers.getCsvFile(self.inputFile)
+            self.inputRows = helpers.getCsvFile(self.inputFile)
             
-            for i, item in enumerate(self.items):
+            for i, inputRow in enumerate(self.inputRows):
                 try:
-                    self.doItem(fileIndex, i, item)
+                    self.showStatus(fileIndex, i, inputRow)
+                    self.doItem(inputRow)
                 except Exception as e:
                     helpers.handleException(e)
     
         self.cleanUp()
 
-    def doItem(self, fileIndex, i, item):
-        keyword = get(item, 'keyword or url')
+    def doItem(self, inputRow):
+        newItems = self.informationFinder.run(inputRow)
 
-        logging.info(f'File {fileIndex + 1} of {len(self.inputFiles)}: {helpers.fileNameOnly(self.inputFile)}. Item {i + 1} of {len(self.items)}: {keyword}.')
+        self.output(newItems)
+
+    def output(self, newItems):
+        for newItem in newItems:
+            outputFile = os.path.join(self.outputDirectory, 'output.csv')
+            
+            line = self.informationFinder.getAsLine(newItem)
+            helpers.appendCsvFile(line, outputFile)
+
+    def showStatus(self, fileIndex, i, inputRow):
+        keyword = get(inputRow, 'keyword or url')
+        logging.info(f'File {fileIndex + 1} of {len(self.inputFiles)}: {helpers.fileNameOnly(self.inputFile)}. Item {i + 1} of {len(self.inputRows)}: {keyword}.')
 
     def cleanUp(self):
         logging.info('Done')
@@ -46,6 +59,10 @@ class Main:
 
         self.options = {
         }
+
+        self.outputDirectory = 'output'
+
+        self.informationFinder = InformationFinder()
 
 main = Main()
 main.run()
