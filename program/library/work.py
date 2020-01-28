@@ -172,7 +172,7 @@ class LinkedIn:
         # profile
         if self.isProfileUrl(item):
             results = self.getProfileInformation(keyword)
-        # profile
+        # company
         elif self.isCompanyUrl(item):
             results = self.getCompanyInformation(None, None, keyword)
         # search term
@@ -192,7 +192,7 @@ class LinkedIn:
 
         for listItem in list:
             if get(searchItem, 'search type') == 'companies':
-                details = self.getCompanyInformation(None, None, keyword)
+                details = self.getCompanyInformation(None, listItem.get('urn', ''), listItem.get('url', ''))
             else:
                 details = self.getProfileInformation(listItem.get('url', ''))
 
@@ -336,6 +336,13 @@ class LinkedIn:
 
         j = self.api.get(f'/voyager/api/organization/companies?decorationId=com.linkedin.voyager.deco.organization.web.WebFullCompanyMain-20&q=universalName&universalName={suffix}')            
 
+        if not companyUrn:
+            urn = helpers.getNested(j, ['data', '*elements'])
+            
+            if len(urn) > 0:
+                urn = urn[0]
+                companyUrn = helpers.getLastAfterSplit(urn, ':')
+
         # find the right types of elements
         for included in get(j, 'included'):
             urn = get(included, 'entityUrn')
@@ -477,15 +484,16 @@ class LinkedIn:
         count = 10
 
         onSearchResultIndex = 0
-        anyResultsForThisPage = False
 
         for i in range(0, 100):
             logging.info(f'Getting page {i + 1} of LinkedIn search results')
 
-            url = f'/voyager/api/search/blended?count={count}&filters=List()&keywords={keyword}&origin=GLOBAL_SEARCH_HEADER&q=all&queryContext=List(spellCorrectionEnabled-%3Etrue,relatedSearchesEnabled-%3Etrue,kcardTypes-%3EPROFILE%7CCOMPANY%7CJOB_TITLE)&start={start}'
+            anyResultsForThisPage = False
+
+            url = f'/voyager/api/search/blended?count={count}&filters=List()&keywords={query}&origin=GLOBAL_SEARCH_HEADER&q=all&queryContext=List(spellCorrectionEnabled-%3Etrue,relatedSearchesEnabled-%3Etrue,kcardTypes-%3EPROFILE%7CCOMPANY%7CJOB_TITLE)&start={start}'
 
             if get(searchItem, 'search type') == 'companies':
-                url = f'/voyager/api/search/blended?count=10&filters=List(resultType-%3ECOMPANIES)&keywords={keyword}&origin=GLOBAL_SEARCH_HEADER&q=all&queryContext=List(spellCorrectionEnabled-%3Etrue)&start={start}'
+                url = f'/voyager/api/search/blended?count=10&filters=List(resultType-%3ECOMPANIES)&keywords={query}&origin=GLOBAL_SEARCH_HEADER&q=all&queryContext=List(spellCorrectionEnabled-%3Etrue)&start={start}'
             
             j = self.api.get(url)
             
@@ -528,8 +536,13 @@ class LinkedIn:
                     if not url or not urn:
                         continue
 
+                    id = helpers.findBetween(url, '/in/', '/')
+
+                    if get(searchItem, 'search type') == 'companies':
+                        id = helpers.findBetween(url, '/company/', '/')
+
                     newItem = {
-                        'id': helpers.findBetween(url, '/in/', '/'),
+                        'id': id,
                         'site': helpers.getDomainName(self.url),
                         'url': url,
                         'urn': urn,

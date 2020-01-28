@@ -29,7 +29,9 @@ class Main:
 
     def showStatus(self, fileIndex, i, inputRow):
         keyword = get(inputRow, 'keyword')
-        logging.info(f'File {fileIndex + 1} of {len(self.inputFiles)}: {helpers.fileNameOnly(self.inputFile)}. Item {i + 1} of {len(self.inputRows)}: {keyword}.')
+        searchType = inputRow.get('type', 'url')
+
+        logging.info(f'File {fileIndex + 1} of {len(self.inputFiles)}: {helpers.fileNameOnly(self.inputFile)}. Item {i + 1} of {len(self.inputRows)}: {keyword}. Search type: {searchType}.')
 
     def cleanUp(self):
         logging.info('Done')

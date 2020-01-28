@@ -707,8 +707,8 @@ class DomainFinder:
 
     def getRandomProxy(self):
         if not self.proxies:
-            if os.path.exists('proxies.csv'):
-                self.proxies = helpers.getCsvFile('proxies.csv')
+            if os.path.exists('user-data/proxies.csv'):
+                self.proxies = helpers.getCsvFile('user-data/proxies.csv')
             elif self.proxyListUrl:            
                 self.proxies = self.getProxiesFromApi()
 

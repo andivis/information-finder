@@ -23,8 +23,8 @@ class InformationFinder:
 
         newItems = self.linkedIn.search(inputRow, getDetails=True)
 
-        newItems = self.addGoogleMapsInformation(newItems)
-        newItems = self.addGoogleInformation(newItems)
+        newItems = self.addGoogleMapsInformation(inputRow, newItems)
+        newItems = self.addGoogleInformation(inputRow, newItems)
 
         for i, newItem in enumerate(newItems):
             logging.info(f'Result {i + 1} of {len(newItems)}. Site: {get(newItem, "site")}. Keyword: {get(inputRow, "keyword")}. Name: {self.linkedIn.getName(newItem)}.')
@@ -32,11 +32,18 @@ class InformationFinder:
 
         self.markDone(inputRow, newItems)
 
-    def addGoogleInformation(self, newItems):
+    def addGoogleInformation(self, inputRow, newItems):
         import re
         
         logging.info('Adding information from company websites')
 
+        if get(inputRow, 'search type') == 'companies' or self.linkedIn.isCompanyUrl(inputRow):
+            newItems = [
+                {
+                    'companies': newItems
+                }
+            ]
+        
         for i, newItem in enumerate(newItems):
             for j, company in enumerate(get(newItem, 'companies')):
                 logging.info(f'Item {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}: {get(company, "name")}')
@@ -66,6 +73,9 @@ class InformationFinder:
                     # need to use index so it will still be modified after leave this loop
                     company[nameToUse] = googleResult[key]
 
+        if get(inputRow, 'search type') == 'companies' or self.linkedIn.isCompanyUrl(inputRow):
+            newItems = newItems[0]['companies']
+
         return newItems
 
     def getContactInformationFromDomain(self, company, domain):
@@ -91,8 +101,15 @@ class InformationFinder:
 
         return result
 
-    def addGoogleMapsInformation(self, newItems):
+    def addGoogleMapsInformation(self, inputRow, newItems):
         logging.info('Adding information from Google Maps')
+
+        if get(inputRow, 'search type') == 'companies' or self.linkedIn.isCompanyUrl(inputRow):
+            newItems = [
+                {
+                    'companies': newItems
+                }
+            ]
 
         for i, newItem in enumerate(newItems):
             for j, company in enumerate(get(newItem, 'companies')):
@@ -143,6 +160,9 @@ class InformationFinder:
                     if not get(company, nameToUse):
                         logging.info(f'Adding {nameToUse} from Google Maps: {get(googleMapResult, field)}')
                         company[nameToUse] = get(googleMapResult, field)
+
+        if get(inputRow, 'search type') == 'companies' or self.linkedIn.isCompanyUrl(inputRow):
+            newItems = newItems[0]['companies']
 
         return newItems
 
