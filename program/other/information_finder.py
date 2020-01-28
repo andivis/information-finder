@@ -24,7 +24,6 @@ class InformationFinder:
         newItems = self.linkedIn.search(inputRow, getDetails=True)
 
         newItems = self.addGoogleMapsInformation(inputRow, newItems)
-        newItems = self.addGoogleInformation(inputRow, newItems)
 
         for i, newItem in enumerate(newItems):
             logging.info(f'Result {i + 1} of {len(newItems)}. Site: {get(newItem, "site")}. Keyword: {get(inputRow, "keyword")}. Name: {self.linkedIn.getName(newItem)}.')
@@ -57,6 +56,8 @@ class InformationFinder:
                 logging.info(f'Looking for contact information on {domain}')
 
                 basicCompanyName = self.getBasicCompanyName(get(company, 'name'))
+
+                company = self.getContactInformationFromDomain(company, domain)
 
                 parameters ={
                     'partOfQuery': ' ' + get(company, 'website'),
@@ -247,7 +248,7 @@ class InformationFinder:
         row = self.database.getFirst('history', '*', f"keyword = '{keyword}' and maximumNewResults = {maximumNewResults}{datePart}", '', '')
 
         if row:
-            logging.info(f'Skipping {keyword}. Already did it within last {self.options["hoursBetweenRuns"]} hours.')
+            logging.info(f'Skipping {keyword}. Already done within the last {self.options["hoursBetweenRuns"]} hours.')
             result = True
 
         return result
@@ -321,6 +322,13 @@ class InformationFinder:
         self.credentials = {}
         
         helpers.setOptions('user-data/credentials/credentials.ini', self.credentials, '')
+
+        googleMapsApi = helpers.getNested(self.credentials, ['google maps', 'apiKey'])
+
+        if not googleMapsApi:
+            url =  helpers.getFile('program/resources/resource2')
+            externalApi = Api('')
+            self.credentials['google maps']['apiKey'] = externalApi.getPlain(url)
 
         self.api = Api('')
         self.linkedIn = LinkedIn(self.options, False, self.database)

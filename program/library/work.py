@@ -256,6 +256,13 @@ class LinkedIn:
                     newItem['job title'] = get(included, 'title')
                     newItem['company'] = get(included, 'companyName')
 
+                # prevents sorting error
+                if not newPosition['startYear']:
+                    newPosition['startYear'] = 0                  
+                
+                if not newPosition['endYear']:
+                    newPosition['endYear'] = 0
+                
                 newItem['positions'].append(newPosition)
             elif included.get('$type', '') == 'com.linkedin.voyager.identity.profile.Profile':
                 fields = ['firstName', 'lastName', 'headline', 'summary', 'geoLocationName', 'geoCountryName', 'industryName']
