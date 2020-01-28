@@ -12,12 +12,16 @@ from ..library import helpers
 from . domain_finder import DomainFinder
 
 from ..library.helpers import get
+from ..library.api import Api
 from ..library.work import LinkedIn
 from ..library.google_maps import GoogleMaps
 
 class InformationFinder:
     def run(self, inputRow, outputDirectory):
-        newItems = self.linkedIn.search(inputRow, getProfileInformation=True)
+        if self.isDone(inputRow):
+            return
+
+        newItems = self.linkedIn.search(inputRow, getDetails=True)
 
         newItems = self.addGoogleMapsInformation(newItems)
         newItems = self.addGoogleInformation(newItems)
@@ -43,24 +47,49 @@ class InformationFinder:
 
                 domain = helpers.getDomainName(get(company, 'website'))
 
+                logging.info(f'Looking for contact information on {domain}')
+
                 basicCompanyName = self.getBasicCompanyName(get(company, 'name'))
-                
+
                 parameters ={
                     'partOfQuery': ' ' + get(company, 'website'),
                 }
 
+                logging.info(f'Looking for the company\'s social media pages')
+                
                 # want social media page to contain the website
                 googleResult = self.domainFinder.checkExternalDomains(domain, basicCompanyName, parameters)
 
                 for key in googleResult:
-                    if not googleResult[key]:
-                        continue
-
                     nameToUse = helpers.findBetween(key, '', '.')
 
-                    newItem[nameToUse] = googleResult[key]
+                    # need to use index so it will still be modified after leave this loop
+                    company[nameToUse] = googleResult[key]
 
         return newItems
+
+    def getContactInformationFromDomain(self, company, domain):
+        url = self.domainFinder.search(f'site:{domain} contact', 1, True)
+
+        # check if it contains contact information
+        if url == 'no results':
+            return company
+
+        self.api.proxies = self.domainFinder.getRandomProxy()
+
+        contactInformation = self.getContactInformation(url)
+
+        company = helpers.mergeDictionaries(company, contactInformation)
+
+        return company
+
+    def getContactInformation(self, url):
+        result = {}
+        
+        page = self.api.getPlain(url)
+        page = page.lower()
+
+        return result
 
     def addGoogleMapsInformation(self, newItems):
         logging.info('Adding information from Google Maps')
@@ -193,12 +222,12 @@ class InformationFinder:
 
         if self.options['hoursBetweenRuns'] > 0:
             minimumDate = helpers.getDateStringSecondsAgo(self.options['hoursBetweenRuns'] * 60 * 60, True)
-            datePart = f" and gmDateCompleted >= '{minimumDate}'"
+            datePart = f" and gmDate >= '{minimumDate}'"
 
         row = self.database.getFirst('history', '*', f"keyword = '{keyword}' and maximumNewResults = {maximumNewResults}{datePart}", '', '')
 
         if row:
-            logging.info(f'Skipping. Already done this item.')
+            logging.info(f'Skipping {keyword}. Already did it within last {self.options["hoursBetweenRuns"]} hours.')
             result = True
 
         return result
@@ -273,6 +302,7 @@ class InformationFinder:
         
         helpers.setOptions('user-data/credentials/credentials.ini', self.credentials, '')
 
+        self.api = Api('')
         self.linkedIn = LinkedIn(self.options, False, self.database)
         self.googleMaps = GoogleMaps(self.options, self.credentials, self.database)
         self.domainFinder = DomainFinder(self.options)

@@ -143,7 +143,7 @@ def findBetween(s, first, last):
 
     return s[start:end]
 
-def findnth(string, substring, n):
+def findOccurence(string, substring, n):
     parts = string.split(substring, n + 1)
     if len(parts) <= n + 1:
         return -1

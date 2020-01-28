@@ -247,19 +247,8 @@ class DomainFinder:
         for externalDomain in externalDomains:
             matchingUrl = self.checkExternalDomain(externalDomain, basicName, domain, parameters)
 
-            if not matchingUrl:
-                continue
-
-            matchingUrl = helpers.findBetween(matchingUrl, '', '/?')
-            matchingUrl = helpers.findBetween(matchingUrl, '', '?')
-
-            # remove subdirectories
-            index = helpers.findnth(matchingUrl, '/', 3)
-
-            if index >= 0:
-                matchingUrl = matchingUrl[0:index + 1]
-            
-            results[externalDomain] = matchingUrl
+            if matchingUrl:
+                results[externalDomain] = matchingUrl
 
         return results
 
@@ -375,11 +364,11 @@ class DomainFinder:
             self.api.proxies = self.getRandomProxy()
 
             if self.urlContainsText(url, urlToFind, basicName):
-                matchingUrl = url
+                matchingUrl = self.trimUrlToOneSubdirectory(url)
                 score = 300
-                break
+                break        
 
-        message = f'The company\'s page on {domain} seems to be {matchingUrl} and it contains {urlToFind}.'
+        message = f'{domain} page: {matchingUrl}. The page contains "{urlToFind}".'
 
         if parameters:
             if matchingUrl:
@@ -388,6 +377,18 @@ class DomainFinder:
             return matchingUrl
 
         self.increaseConfidence(score, 300, message, f'{domain} page')
+
+    def trimUrlToOneSubdirectory(self, url):
+        url = helpers.findBetween(url, '', '/?')
+        url = helpers.findBetween(url, '', '?')
+
+        # remove subdirectories after the first one
+        index = helpers.findOccurence(url, '/', 3)
+
+        if index >= 0:
+            url = url[0:index + 1]
+        
+        return url
 
     def checkWhois(self, domain, filteredName):
         score = 0

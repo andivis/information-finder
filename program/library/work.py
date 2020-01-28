@@ -164,7 +164,7 @@ class SalesQl:
         self.api.proxies = proxies
 
 class LinkedIn:
-    def search(self, item, getProfileInformation=False):
+    def search(self, item, getDetails=False):
         results = []
 
         keyword = item.get('keyword', '')
@@ -172,30 +172,32 @@ class LinkedIn:
         # profile
         if self.isProfileUrl(item):
             results = self.getProfileInformation(keyword)
+        # profile
+        elif self.isCompanyUrl(item):
+            results = self.getCompanyInformation(None, None, keyword)
         # search term
         else:
-            import urllib.parse
-            query = keyword
-            query = urllib.parse.quote(query)
+            results = self.getSearchResults(item)
 
-            results = self.getSearchResults(item, query)
-
-            if getProfileInformation:
-                results = self.addProfileInformationToList(item, results)
+            if getDetails:
+                results = self.addDetails(item, results)
 
         if self.useSalesql:
             results = self.addContactInformation(item, results)
 
         return results
 
-    def addProfileInformationToList(self, searchItem, list):
+    def addDetails(self, searchItem, list):
         newResults = []
 
         for listItem in list:
-            profiles = self.getProfileInformation(listItem.get('url', ''))
+            if get(searchItem, 'search type') == 'companies':
+                details = self.getCompanyInformation(None, None, keyword)
+            else:
+                details = self.getProfileInformation(listItem.get('url', ''))
 
-            if profiles:
-                newResults.append(profiles[0])
+            if details:
+                newResults.append(details[0])
 
             maximum = searchItem.get('maximumNewResults', self.options['maximumNewResults'])
             maximum = int(maximum)
@@ -307,13 +309,14 @@ class LinkedIn:
 
         return results
 
-    def getCompanyInformation(self, profileResponse, companyUrn):
+    def getCompanyInformation(self, profileResponse, companyUrn, companyUrl=''):
         result = {}
 
-        universalName = ''
+        # in case already have universal name
+        universalName = helpers.findBetween(companyUrl, '/company/', '/')
 
         # need universal name for the search
-        for included in profileResponse.get('included'):
+        for included in get(profileResponse, 'included'):
             if included.get('$type', '') == 'com.linkedin.voyager.entities.shared.MiniCompany':
                 urn = get(included, 'entityUrn')
                 urn = helpers.getLastAfterSplit(urn, ':')
@@ -356,7 +359,7 @@ class LinkedIn:
                 result['minimum employees'] = helpers.getNested(included, ['staffCountRange', 'start'])
                 result['maximum employees'] = helpers.getNested(included, ['staffCountRange', 'end'])
                 result['company type'] = helpers.getNested(included, ['companyType', 'localizedName'])
-                result['linkedin url'] = 'https://www.linkedin.com/in/' + universalName + '/'
+                result['linkedin url'] = 'https://www.linkedin.com/in/company/' + universalName + '/'
 
                 result['city'] = helpers.getNested(included, ['headquarter', 'city'])
                 result['region'] = helpers.getNested(included, ['headquarter', 'geographicArea'])
@@ -367,6 +370,10 @@ class LinkedIn:
                 if not get(result, 'industry'):
                     result['industry'] = get(included, 'localizedName')
 
+        # needs to be a list
+        if companyUrl:
+            return [result]
+        
         return result
 
     def getPositionsAsString(self, item):
@@ -459,10 +466,12 @@ class LinkedIn:
 
         return newResults
 
-    def getSearchResults(self, searchItem, keyword):
+    def getSearchResults(self, searchItem):
         results = []
 
-        keyword = searchItem.get('keyword', '')
+        import urllib.parse
+        query = searchItem.get('keyword', '')
+        query = urllib.parse.quote(query)
 
         start = 0
         count = 10
@@ -471,9 +480,14 @@ class LinkedIn:
         anyResultsForThisPage = False
 
         for i in range(0, 100):
-            logging.info(f'Getting page {i + 1} of search results')
+            logging.info(f'Getting page {i + 1} of LinkedIn search results')
 
-            j = self.api.get(f'/voyager/api/search/blended?count={count}&filters=List()&keywords={keyword}&origin=GLOBAL_SEARCH_HEADER&q=all&queryContext=List(spellCorrectionEnabled-%3Etrue,relatedSearchesEnabled-%3Etrue,kcardTypes-%3EPROFILE%7CCOMPANY%7CJOB_TITLE)&start={start}')
+            url = f'/voyager/api/search/blended?count={count}&filters=List()&keywords={keyword}&origin=GLOBAL_SEARCH_HEADER&q=all&queryContext=List(spellCorrectionEnabled-%3Etrue,relatedSearchesEnabled-%3Etrue,kcardTypes-%3EPROFILE%7CCOMPANY%7CJOB_TITLE)&start={start}'
+
+            if get(searchItem, 'search type') == 'companies':
+                url = f'/voyager/api/search/blended?count=10&filters=List(resultType-%3ECOMPANIES)&keywords={keyword}&origin=GLOBAL_SEARCH_HEADER&q=all&queryContext=List(spellCorrectionEnabled-%3Etrue)&start={start}'
+            
+            j = self.api.get(url)
             
             elements = helpers.getNested(j, ['data', 'elements'])
 
@@ -507,6 +521,9 @@ class LinkedIn:
 
                     if fields:
                         urn = fields[-1]
+
+                    if get(searchItem, 'search type') == 'companies':
+                        url = self.getCompanyUrl(urn, j)
                     
                     if not url or not urn:
                         continue
@@ -551,6 +568,19 @@ class LinkedIn:
 
         return results
 
+    def getCompanyUrl(self, companyUrn, response):
+        result = ''
+
+        for item in get(response, 'included'):
+            urn = get(item, 'entityUrn')
+            urn = helpers.getLastAfterSplit(urn, ':')
+            
+            if urn == companyUrn:
+                result = 'https://www.linkedin.com/in/company/' + get(item, 'universalName') + '/'
+                break
+
+        return result
+
     def hitPaywall(self, element):
         result = False
         
@@ -580,6 +610,9 @@ class LinkedIn:
 
     def isProfileUrl(self, item):
         return get(item, 'keyword').startswith('https://www.linkedin.com/in/')
+
+    def isCompanyUrl(self, item):
+        return get(item, 'keyword').startswith('https://www.linkedin.com/company/')
 
     def __init__(self, options, useSalesql, database):
         self.options = options

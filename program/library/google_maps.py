@@ -75,7 +75,7 @@ class GoogleMaps:
         nextPageToken = ''
         
         for i in range(0, 1000):
-            logging.info(f'Getting page {i + 1} of search results')
+            logging.info(f'Getting page {i + 1} of Google Maps search results')
 
             nextPageTokenPart = ''
     
@@ -130,7 +130,7 @@ class GoogleMaps:
         return result
     
     def handleError(self, j):
-        if j.get('status', '') != 'OK':
+        if j.get('status', '') != 'OK' and j.get('status', '') != 'ZERO_RESULTS':
             error = j.get('error_message', '')
             logging.error(f'Google Maps: {error}')
 
