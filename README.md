@@ -1,5 +1,9 @@
 # information-finder
 
+# Video
+
+https://www.loom.com/share/f1859e0d96294971a85167bdc98942ec
+
 ## Installation
 
 1. Make sure Python 3.6 or higher and git are installed.
