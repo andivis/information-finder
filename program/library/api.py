@@ -116,7 +116,7 @@ class Api:
 
     def handleResponseLog(self, url, response, fileName):
         if not response:
-            logging.debug(f'Something went wrong with the response')
+            logging.debug(f'Something went wrong with the response. Response: {response}.')
             return
                 
         logging.debug(f'Response headers: {response.headers}')
@@ -319,8 +319,6 @@ class Api:
         try:
             import brotli
         except ImportError as e:
-            logging.debug(e)
-            logging.error(f'You need to run "pip3 install brotlipy" or "pip install brotlipy" first, then restart this script')
-            logging.debug(traceback.format_exc())
+            helpers.handleException(e, 'You need to run "pip3 install brotlipy" or "pip install brotlipy" first, then restart this script')
             input("Press enter to exit...")
             exit()
