@@ -136,7 +136,6 @@ class Google:
     def __init__(self):
         self.api = Api('')
         self.website = Website()
-        self.proxies = None
         self.captcha = False
         self.captchaOnLastSearch = False
         self.avoidDomains = []

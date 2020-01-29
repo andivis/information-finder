@@ -231,7 +231,7 @@ class LinkedIn:
         }
 
         # find the right types of elements
-        for included in j.get('included'):
+        for included in get(j, 'included'):
             if included.get('$type', '') == 'com.linkedin.voyager.identity.profile.Position':
                 newPosition = {}
 
