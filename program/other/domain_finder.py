@@ -234,7 +234,7 @@ class DomainFinder:
 
         self.increaseConfidence(score, 175, 'The domain from Google matches the domain from another service.', 'check')
 
-    def checkExternalDomains(self, domain, basicName, parameters={}):
+    def checkExternalDomains(self, domain, basicName, parameters={}, domainToUse=None):
         results = {}
 
         # does the company have social media pages?
@@ -243,6 +243,9 @@ class DomainFinder:
             'instagram.com',
             'twitter.com'
         ]
+
+        if domainToUse:
+            externalDomains = [domainToUse]
         
         for externalDomain in externalDomains:
             matchingUrl = self.checkExternalDomain(externalDomain, basicName, domain, parameters)
@@ -364,7 +367,7 @@ class DomainFinder:
             self.api.proxies = self.getRandomProxy()
 
             if self.urlContainsText(url, urlToFind, basicName):
-                matchingUrl = self.trimUrlToOneSubdirectory(url)
+                matchingUrl = self.trimUrlToSubdirectory(url, 1)
                 score = 300
                 break        
 
@@ -378,12 +381,12 @@ class DomainFinder:
 
         self.increaseConfidence(score, 300, message, f'{domain} page')
 
-    def trimUrlToOneSubdirectory(self, url):
+    def trimUrlToSubdirectory(self, url, levels):
         url = helpers.findBetween(url, '', '/?')
         url = helpers.findBetween(url, '', '?')
 
         # remove subdirectories after the first one
-        index = helpers.findOccurence(url, '/', 3)
+        index = helpers.findOccurence(url, '/', 2 + levels)
 
         if index >= 0:
             url = url[0:index + 1]

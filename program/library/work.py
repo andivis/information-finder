@@ -307,7 +307,7 @@ class LinkedIn:
             if not newItem['companies']:
                 newItem['companies'] = []
 
-            newItem['companies'] = self.addIfNotExists(newItem['companies'], company, 'universalName')
+            newItem['companies'] = self.addIfNotExists(newItem['companies'], company, 'id')
 
             position['company id'] = get(company, 'id')
             position['company linkedin url'] = get(company, 'linkedin url')

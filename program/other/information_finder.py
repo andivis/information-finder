@@ -48,7 +48,7 @@ class InformationFinder:
         
         for i, newItem in enumerate(newItems):
             for j, company in enumerate(get(newItem, 'companies')):
-                logging.info(f'Item {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}: {get(company, "name")}')
+                logging.info(f'Adding to result {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}: {get(company, "name")}')
 
                 if not get(company, 'website'):
                     logging.debug('Skipping. No website.')
@@ -68,14 +68,26 @@ class InformationFinder:
 
                 logging.info(f'Looking for the company\'s social media pages')
                 
-                # want social media page to contain the website
-                googleResult = self.domainFinder.checkExternalDomains(domain, basicCompanyName, parameters)
+                socialMediaDomains = [
+                    'facebook.com',
+                    'twitter.com'
+                ]
 
-                for key in googleResult:
-                    nameToUse = helpers.findBetween(key, '', '.')
+                for socialMediaDomain in socialMediaDomains:
+                    basicDomain = helpers.findBetween(socialMediaDomain, '', '.')
 
-                    # need to use index so it will still be modified after leave this loop
-                    company[nameToUse] = googleResult[key]
+                    # already have it?
+                    if get(company, basicDomain):
+                        continue
+
+                    # want social media page to contain the website
+                    googleResult = self.domainFinder.checkExternalDomains(domain, basicCompanyName, parameters, socialMediaDomain)
+
+                    for key in googleResult:
+                        nameToUse = helpers.findBetween(key, '', '.')
+
+                        # need to use index so it will still be modified after leave this loop
+                        company[nameToUse] = googleResult[key]
 
         if get(inputRow, 'search type') == 'companies' or self.linkedIn.isCompanyUrl(inputRow):
             newItems = newItems[0]['companies']
@@ -91,13 +103,13 @@ class InformationFinder:
 
         self.api.proxies = self.domainFinder.getRandomProxy()
 
-        contactInformation = self.getContactInformation(url)
+        contactInformation = self.getContactInformation(company, url)
 
         company = helpers.mergeDictionaries(company, contactInformation)
 
         return company
 
-    def getContactInformation(self, url):
+    def getContactInformation(self, company, url):
         results = {}
 
         html = self.api.getPlain(url)
@@ -105,12 +117,19 @@ class InformationFinder:
 
         xpaths = [
             ["//a[starts-with(@href, 'mailto:')]", 'href', 'email'],
-            ["//a[starts-with(@href, 'tel:')]", 'href', 'phone']
+            ["//a[starts-with(@href, 'tel:')]", 'href', 'phone'],
+            ["//a[contains(@href, '://twitter.com/')]", 'href', 'facebook'],
+            ["//a[contains(@href, '://facebook.com/')]", 'href', 'twitter'],
+            ["//a[contains(@href, '://instagram.com/')]", 'href', 'instagram'],
+            ["//a[contains(@href, '://youtube.com/')]", 'href', 'youtube']
         ]
 
         website = Website()        
 
         for xpath in xpaths:
+            if get(company, xpath[2]):
+                continue                
+
             elements = website.getXpathInElement(document, xpath[0], False)
 
             attribute = xpath[1]
@@ -124,8 +143,20 @@ class InformationFinder:
                     value = element.attrib[attribute]
 
                 if value:
-                    value = helpers.findBetween(value, ':', '?')
-                    value = value.lower()
+                    if xpath[2] == 'email' or xpath[2] == 'phone':
+                        value = helpers.findBetween(value, ':', '?')
+                        # in case there are multiple emails
+                        value = helpers.findBetween(value, '', ',')
+                        value = value.lower()
+                    else:
+                        level = 1
+
+                        # because can have /user/xyz or /channel/xyz
+                        if xpath[2] == 'youtube':
+                            level = 2
+                        
+                        value = self.domainFinder.trimUrlToSubdirectory(value, level)
+                    
                     results[xpath[2]] = value
 
                     logging.info(f'Found {xpath[2]} on {url}: {value}')
@@ -135,18 +166,19 @@ class InformationFinder:
 
         plainText = website.getXpath(html, './/body', True)
 
-        if not get(results, 'phone'):
-            results['phone'] = self.getFirstPhoneNumber(url, plainText)
-
-        if not get(results, 'email'):
+        if not get(company, 'email') and not get(results, 'email'):
             results['email'] = self.getFirstEmail(url, plainText)
+
+        if not get(company, 'phone') and not get(results, 'phone'):
+            results['phone'] = self.getFirstPhoneNumber(url, plainText)
 
         return results
 
     def getFirstPhoneNumber(self, url, plainText):
         result = ''
 
-        regex = r'\+?[\d\s\-\*\(\)]{7,22}'
+        # must start with + or a digit. otherwise the end of the phone number can get cut off because of wrong leading characters.
+        regex = r'[\+\d]+[\d\s\-\*\.\(\)]{6,22}'
 
         for line in plainText.splitlines():
             matches = re.findall(regex, line)
@@ -185,8 +217,22 @@ class InformationFinder:
         return result
 
     def getFirstEmail(self, url, plainText):
-        
-        return ''
+        result = ''
+
+        regex = r'(([^<>()\[\]\\.\,\*;:\s@\|"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))'
+
+        for line in plainText.splitlines():
+            match = re.search(regex, line)
+
+            if not match:
+                continue
+
+            result = match.group()
+            result = result.lower()
+
+            break
+
+        return result
 
     def addGoogleMapsInformation(self, inputRow, newItems):
         logging.info('Adding information from Google Maps')
@@ -200,7 +246,7 @@ class InformationFinder:
 
         for i, newItem in enumerate(newItems):
             for j, company in enumerate(get(newItem, 'companies')):
-                logging.info(f'Item {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}: {get(company, "name")}')
+                logging.info(f'Adding to result {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}: {get(company, "name")}')
 
                 fields = ['city', 'region', 'country']
 
@@ -264,7 +310,7 @@ class InformationFinder:
         fields = ['site', 'keyword', 'first name', 'last name', 'email', 'phone', 'headline', 'job title', 'company', 'summary', 'industry', 'location', 'country', 'positions', 'school', 'field of study', 'id', 'linkedin url']
 
         # output to companies.csv too
-        companyFields = ['site', 'keyword', 'name', 'website', 'phone', 'city', 'region', 'country', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url', 'facebook', 'twitter', 'instagram']
+        companyFields = ['site', 'keyword', 'name', 'website', 'phone', 'city', 'region', 'country', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url', 'facebook', 'twitter', 'instagram', 'youtube']
 
         companiesOutputFile = os.path.join(outputDirectory, 'companies.csv')
 
@@ -419,35 +465,47 @@ class InformationFinder:
         #debug
         list = helpers.getFile('aaa').splitlines()
 
-        regex = r'\+?[\d\s\-\*\(\)]{7,22}'
+        regex = r'(([^<>()\[\]\\.\,\*;:\s@\|"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))'
 
         helpers.toFile('', 'result')
         
         for line in list:
+            break
             import re
 
-            matches = re.findall(regex, line)
+            result = ''
+            matches = re.search(regex, line)
 
-            for match in matches:
-                if not self.isPhoneNumber(match):
-                    continue
-
-                phoneNumber = ''
+            if not matches:
+                result += 'no '
+            else:
+                phoneNumber = matches.group()
                 
-                if self.isPhoneNumber(match):
-                    phoneNumber = self.getPhoneNumberOnly(match)
-
-                result = ''
-               
                 if phoneNumber:
-                    result += 'yes ' + phoneNumber + '  full match: ' + match + '            '
+                    result += 'yes ' + phoneNumber + '            '
                 else:
                     result += 'no '
 
-                result += line
-                helpers.appendToFile(result, 'result')
+            result += line
+            helpers.appendToFile(result, 'result')
 
-                break
+
+        for line in list:
+            break
+            import re
+
+            result = self.getFirstPhoneNumber('', line)
+
+            toPrint = ''
+
+            if result:
+                toPrint += 'yes ' + result + '            '
+            else:
+                toPrint += 'no '
+            
+            toPrint += line
+            
+            helpers.appendToFile(toPrint, 'result')
 
         #debug input('done')
 
