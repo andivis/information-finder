@@ -295,7 +295,7 @@ def appendCsvFile(list, fileName):
 
 # d1 takes priority
 def mergeDictionaries(d1, d2):
-    result = d1.copy()
+    result = d1
 
     # only overwrite if value is empty or absent
     for key in d2:

@@ -49,7 +49,8 @@ pip3 install brotlipy
 ## Instructions
 
 1. Open a terminal window. Cd to the directory containing `main.py`. It's where you cloned the repository before.
-2. Optionally, edit the `user-data/options.ini` file to your liking
-3. Optionally, put your proxy list into `user-data/proxies.csv`. The header must contain `url,port,username,password`. The other lines follow that format.
-4. Make sure `user-data/input.csv` contains the keywords/URL's you want to get. The search type column corresponds what you choose when you perform a search on LinkedIn. It can be `all` or `companies`. Blank means it's a URL.
-5. Run `python3 main.py`. Depending on your system you may need run `python main.py` instead.
+2. Put your `www.linkedin.com.har` into `user-data\credentials` as shown in the video.
+3. Make sure `user-data/input.csv` contains the keywords/URL's you want to get. The search type column corresponds what you choose when you perform a search on LinkedIn. It can be `all` or `companies`. Blank means it's a URL.
+4. Optionally, edit the `user-data/options.ini` file to your liking
+5. Optionally, put your proxy list into `user-data/proxies.csv`. The header must contain `url,port,username,password`. The other lines follow that format.
+6. Run `python3 main.py`. Depending on your system you may need run `python main.py` instead.

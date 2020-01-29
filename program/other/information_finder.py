@@ -60,7 +60,7 @@ class InformationFinder:
 
                 basicCompanyName = self.getBasicCompanyName(get(company, 'name'))
 
-                company = self.getContactInformationFromDomain(company, domain)
+                self.addContactInformationFromDomain(company, domain)
 
                 parameters ={
                     'partOfQuery': ' ' + get(company, 'website'),
@@ -94,7 +94,7 @@ class InformationFinder:
 
         return newItems
 
-    def getContactInformationFromDomain(self, company, domain):
+    def addContactInformationFromDomain(self, company, domain):
         url = self.domainFinder.search(f'site:{domain} contact', 1, True)
 
         # check if it contains contact information
@@ -107,8 +107,6 @@ class InformationFinder:
 
         company = helpers.mergeDictionaries(company, contactInformation)
 
-        return company
-
     def getContactInformation(self, company, url):
         results = {}
 
@@ -118,10 +116,10 @@ class InformationFinder:
         xpaths = [
             ["//a[starts-with(@href, 'mailto:')]", 'href', 'email'],
             ["//a[starts-with(@href, 'tel:')]", 'href', 'phone'],
-            ["//a[contains(@href, '://twitter.com/')]", 'href', 'facebook'],
-            ["//a[contains(@href, '://facebook.com/')]", 'href', 'twitter'],
-            ["//a[contains(@href, '://instagram.com/')]", 'href', 'instagram'],
-            ["//a[contains(@href, '://youtube.com/')]", 'href', 'youtube']
+            ["//a[contains(@href, 'facebook.com/')]", 'href', 'facebook'],
+            ["//a[contains(@href, 'twitter.com/')]", 'href', 'twitter'],
+            ["//a[contains(@href, 'instagram.com/')]", 'href', 'instagram'],
+            ["//a[contains(@href, 'youtube.com/')]", 'href', 'youtube']
         ]
 
         website = Website()        
@@ -461,53 +459,6 @@ class InformationFinder:
             url =  helpers.getFile('program/resources/resource2')
             externalApi = Api('')
             self.credentials['google maps']['apiKey'] = externalApi.getPlain(url)
-
-        #debug
-        list = helpers.getFile('aaa').splitlines()
-
-        regex = r'(([^<>()\[\]\\.\,\*;:\s@\|"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))'
-
-        helpers.toFile('', 'result')
-        
-        for line in list:
-            break
-            import re
-
-            result = ''
-            matches = re.search(regex, line)
-
-            if not matches:
-                result += 'no '
-            else:
-                phoneNumber = matches.group()
-                
-                if phoneNumber:
-                    result += 'yes ' + phoneNumber + '            '
-                else:
-                    result += 'no '
-
-            result += line
-            helpers.appendToFile(result, 'result')
-
-
-        for line in list:
-            break
-            import re
-
-            result = self.getFirstPhoneNumber('', line)
-
-            toPrint = ''
-
-            if result:
-                toPrint += 'yes ' + result + '            '
-            else:
-                toPrint += 'no '
-            
-            toPrint += line
-            
-            helpers.appendToFile(toPrint, 'result')
-
-        #debug input('done')
 
         self.api = Api('')
         self.linkedIn = LinkedIn(self.options, False, self.database)
