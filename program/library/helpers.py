@@ -175,6 +175,18 @@ def squeezeWhitespace(s):
 
     return re.sub(r'\s\s+', ' ', s)
 
+def squeeze(s, characters):
+    import re
+
+    result = s
+
+    for character in characters:
+        escapedCharacter = re.escape(character)
+        
+        result =  re.sub(f'{escapedCharacter}+', character, result)
+
+    return result
+
 def addBeforeCapitalLetters(s, character=' '):
     result = ''
 

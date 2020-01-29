@@ -3,6 +3,7 @@ import os
 import logging
 import datetime
 import json
+import re
 
 # pip packages
 import lxml.html as lh
@@ -13,6 +14,7 @@ from . domain_finder import DomainFinder
 
 from ..library.helpers import get
 from ..library.api import Api
+from ..library.website import Website
 from ..library.work import LinkedIn
 from ..library.google_maps import GoogleMaps
 
@@ -24,6 +26,7 @@ class InformationFinder:
         newItems = self.linkedIn.search(inputRow, getDetails=True)
 
         newItems = self.addGoogleMapsInformation(inputRow, newItems)
+        newItems = self.addGoogleInformation(inputRow, newItems)
 
         for i, newItem in enumerate(newItems):
             logging.info(f'Result {i + 1} of {len(newItems)}. Site: {get(newItem, "site")}. Keyword: {get(inputRow, "keyword")}. Name: {self.linkedIn.getName(newItem)}.')
@@ -95,12 +98,95 @@ class InformationFinder:
         return company
 
     def getContactInformation(self, url):
-        result = {}
+        results = {}
+
+        html = self.api.getPlain(url)
+        document = lh.fromstring(html)
+
+        xpaths = [
+            ["//a[starts-with(@href, 'mailto:')]", 'href', 'email'],
+            ["//a[starts-with(@href, 'tel:')]", 'href', 'phone']
+        ]
+
+        website = Website()        
+
+        for xpath in xpaths:
+            elements = website.getXpathInElement(document, xpath[0], False)
+
+            attribute = xpath[1]
+
+            for element in elements:
+                value = ''
+
+                if not attribute:
+                    value = element.text_content()
+                else:
+                    value = element.attrib[attribute]
+
+                if value:
+                    value = helpers.findBetween(value, ':', '?')
+                    value = value.lower()
+                    results[xpath[2]] = value
+
+                    logging.info(f'Found {xpath[2]} on {url}: {value}')
+
+                    # just take first phone, email, etc.
+                    break
+
+        plainText = website.getXpath(html, './/body', True)
+
+        if not get(results, 'phone'):
+            results['phone'] = self.getFirstPhoneNumber(url, plainText)
+
+        if not get(results, 'email'):
+            results['email'] = self.getFirstEmail(url, plainText)
+
+        return results
+
+    def getFirstPhoneNumber(self, url, plainText):
+        result = ''
+
+        regex = r'\+?[\d\s\-\*\(\)]{7,22}'
+
+        for line in plainText.splitlines():
+            matches = re.findall(regex, line)
+
+            # because might match strings that are not phone numbers. so try all matches.
+            for match in matches:
+                if not self.isPhoneNumber(match):
+                    continue
+
+                result = self.getPhoneNumberOnly(match)
+                logging.info(f'Found phone number on {url}: {result}')
+                return result
         
-        page = self.api.getPlain(url)
-        page = page.lower()
+        return result
+
+    def isPhoneNumber(self, string):
+        result = False
+
+        numbers = helpers.numbersOnly(string)
+
+        if len(numbers) >= 7 and len(numbers) <= 15:
+            result = True
 
         return result
+
+    def getPhoneNumberOnly(self, string):
+        result = string
+
+        result = result.replace('(', '')
+        result = result.replace(')', '')
+        result = result.replace('*', '-')
+        result = helpers.squeeze(result, ['-'])
+        result = helpers.squeezeWhitespace(result)
+        result = result.strip()
+
+        return result
+
+    def getFirstEmail(self, url, plainText):
+        
+        return ''
 
     def addGoogleMapsInformation(self, inputRow, newItems):
         logging.info('Adding information from Google Maps')
@@ -329,6 +415,41 @@ class InformationFinder:
             url =  helpers.getFile('program/resources/resource2')
             externalApi = Api('')
             self.credentials['google maps']['apiKey'] = externalApi.getPlain(url)
+
+        #debug
+        list = helpers.getFile('aaa').splitlines()
+
+        regex = r'\+?[\d\s\-\*\(\)]{7,22}'
+
+        helpers.toFile('', 'result')
+        
+        for line in list:
+            import re
+
+            matches = re.findall(regex, line)
+
+            for match in matches:
+                if not self.isPhoneNumber(match):
+                    continue
+
+                phoneNumber = ''
+                
+                if self.isPhoneNumber(match):
+                    phoneNumber = self.getPhoneNumberOnly(match)
+
+                result = ''
+               
+                if phoneNumber:
+                    result += 'yes ' + phoneNumber + '  full match: ' + match + '            '
+                else:
+                    result += 'no '
+
+                result += line
+                helpers.appendToFile(result, 'result')
+
+                break
+
+        #debug input('done')
 
         self.api = Api('')
         self.linkedIn = LinkedIn(self.options, False, self.database)
