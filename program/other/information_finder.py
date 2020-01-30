@@ -308,7 +308,7 @@ class InformationFinder:
         fields = ['site', 'keyword', 'first name', 'last name', 'email', 'phone', 'headline', 'job title', 'company', 'summary', 'industry', 'location', 'country', 'positions', 'school', 'field of study', 'id', 'linkedin url']
 
         # output to companies.csv too
-        companyFields = ['site', 'keyword', 'name', 'website', 'phone', 'city', 'region', 'country', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url', 'facebook', 'twitter', 'instagram', 'youtube']
+        companyFields = ['site', 'keyword', 'name', 'website', 'phone', 'city', 'region', 'country', 'address', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url', 'facebook', 'twitter', 'instagram', 'youtube']
 
         companiesOutputFile = os.path.join(outputDirectory, 'companies.csv')
 

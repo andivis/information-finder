@@ -1,9 +1,6 @@
 /.vscode
-/.vs
 /user-data/logs
 
-*.sln
-*.pyproj
 *.sqlite
 *.bat
 *.har

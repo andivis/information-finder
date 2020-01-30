@@ -22,6 +22,7 @@ class GoogleMaps:
                 continue
 
             details = self.getPlaceDetails(item)
+            
             phone = details.get('international_phone_number', '')
 
             name = item.get('name', '')
@@ -41,8 +42,7 @@ class GoogleMaps:
                 'name': name,
                 'email': '',
                 'phone': phone,
-                'job title': '',
-                'company': '',
+                'address': get(item, 'formatted_address'),
                 'url': details.get('website', ''),
                 'google maps url': 'https://www.google.com/maps/place/?q=place_id:' + item.get('place_id', '')
             }
