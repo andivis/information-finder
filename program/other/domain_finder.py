@@ -151,14 +151,14 @@ class DomainFinder:
 
         return result
 
-    def search(self, query, numberOfResults, acceptAll=False):
+    def search(self, query, numberOfResults, acceptAll=False, moreParameters={}):
         logging.debug(f'Searching for: {query}')
 
         self.google.api.proxies = self.getRandomProxy()
 
         searchUrl = self.defaultSearchUrl
 
-        result = self.google.search(query, numberOfResults, searchUrl, acceptAll)
+        result = self.google.search(query, numberOfResults, searchUrl, acceptAll, moreParameters)
 
         self.handleErrors(result)
 

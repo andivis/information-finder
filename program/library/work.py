@@ -373,7 +373,7 @@ class LinkedIn:
                 result['minimum employees'] = helpers.getNested(included, ['staffCountRange', 'start'])
                 result['maximum employees'] = helpers.getNested(included, ['staffCountRange', 'end'])
                 result['company type'] = helpers.getNested(included, ['companyType', 'localizedName'])
-                result['linkedin url'] = 'https://www.linkedin.com/in/company/' + universalName + '/'
+                result['linkedin url'] = 'https://www.linkedin.com/company/' + universalName + '/'
 
                 result['city'] = helpers.getNested(included, ['headquarter', 'city'])
                 result['region'] = helpers.getNested(included, ['headquarter', 'geographicArea'])
@@ -384,11 +384,39 @@ class LinkedIn:
                 if not get(result, 'industry'):
                     result['industry'] = get(included, 'localizedName')
 
+        result = self.addLinkToNewestPost(result, companyUrn)
+
         # needs to be a list
         if companyUrl:
             return [result]
         
         return result
+
+    def addLinkToNewestPost(self, company, companyUrn):
+        link = ''
+
+        j = self.api.get(f'/voyager/api/organization/updatesV2?companyIdOrUniversalName={companyUrn}&count=3&moduleKey=ORGANIZATION_MEMBER_FEED_DESKTOP&numComments=0&numLikes=0&q=companyRelevanceFeed&start=0')
+
+        # find the right types of elements
+        for included in get(j, 'included'):
+            if included.get('$type', '') != 'com.linkedin.voyager.feed.render.UpdateV2'
+                continue
+
+            for action in helpers.getNested(included, ['updateMetadata', 'actions']):
+                if get(action, 'type') == 'SHARE_VIA':
+                    link = get(action, 'url')
+                    
+                    break
+
+            if link:
+                break
+
+        if not get(company, 'media links'):
+            company['media links'] = link
+        else:
+            company['media links'] += ' ' + link
+
+        return company
 
     def getPositionsAsString(self, item):
         values = []
@@ -596,7 +624,7 @@ class LinkedIn:
             urn = helpers.getLastAfterSplit(urn, ':')
             
             if urn == companyUrn:
-                result = 'https://www.linkedin.com/in/company/' + get(item, 'universalName') + '/'
+                result = 'https://www.linkedin.com/company/' + get(item, 'universalName') + '/'
                 break
 
         return result

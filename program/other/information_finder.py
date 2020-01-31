@@ -60,7 +60,8 @@ class InformationFinder:
 
                 basicCompanyName = self.getBasicCompanyName(get(company, 'name'))
 
-                self.addContactInformationFromDomain(company, domain)
+                company = self.addContactInformationFromDomain(company, domain)
+                company = self.addMediaLinks(company, domain)
 
                 parameters ={
                     'partOfQuery': ' ' + get(company, 'website'),
@@ -70,7 +71,8 @@ class InformationFinder:
                 
                 socialMediaDomains = [
                     'facebook.com',
-                    'twitter.com'
+                    'twitter.com',
+                    'youtube.com'
                 ]
 
                 for socialMediaDomain in socialMediaDomains:
@@ -106,6 +108,8 @@ class InformationFinder:
         contactInformation = self.getContactInformation(company, url)
 
         company = helpers.mergeDictionaries(company, contactInformation)
+
+        return company
 
     def getContactInformation(self, company, url):
         results = {}
@@ -232,6 +236,37 @@ class InformationFinder:
 
         return result
 
+    def addMediaLinks(self, company, domain):
+        # look for a pdf
+         company = self.addLink(f'site:{domain} pdf', company, domain, {})
+
+        moreParameters = {
+            'tbm': 'nws'
+        }
+
+        # look for news
+        company = self.addLink(f'{get(company, "name")}', company, domain, moreParameters)
+
+        moreParameters = {
+            'tbm': 'vid'
+        }
+
+        # look for videos
+        company = self.addLink(f'{get(company, "name")}', company, domain, moreParameters)
+
+        return company
+
+    def addLink(self, query, company, domain, moreParameters):
+        url = self.domainFinder.search(query, 1, True, moreParameters)
+
+        if url != 'no results':
+            if not get(company, 'media links'):
+                company['media links'] = ''
+
+            company['media links'] += ' ' + url
+
+        return company
+    
     def addGoogleMapsInformation(self, inputRow, newItems):
         logging.info('Adding information from Google Maps')
 

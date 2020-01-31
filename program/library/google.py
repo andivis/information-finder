@@ -8,7 +8,7 @@ from .api import Api
 from .website import Website
 
 class Google:
-    def search(self, query, numberOfResults, urlPrefix=None, acceptAll=False):
+    def search(self, query, numberOfResults, urlPrefix=None, acceptAll=False, moreParameters={}):
         self.captchaOnLastSearch = False
         
         if urlPrefix:
@@ -20,6 +20,8 @@ class Google:
             'q': query,
             'hl': 'en'
         }
+
+        parameters = helpers.mergeDictionaries(parameters, moreParameters)
 
         page = self.api.get('/search', parameters, False)
 
