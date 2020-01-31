@@ -23,6 +23,9 @@ class InformationFinder:
         if self.isDone(inputRow):
             return
 
+        self.outputFile = os.path.join(outputDirectory, 'output.csv')
+        self.companiesOutputFile = os.path.join(outputDirectory, 'companies.csv')
+
         newItems = self.linkedIn.search(inputRow, getDetails=True)
 
         newItems = self.addGoogleMapsInformation(inputRow, newItems)
@@ -49,6 +52,9 @@ class InformationFinder:
         for i, newItem in enumerate(newItems):
             for j, company in enumerate(get(newItem, 'companies')):
                 logging.info(f'Adding to result {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}: {get(company, "name")}')
+
+                if self.isInOutputFile(company):
+                    continue
 
                 if not get(company, 'website'):
                     logging.debug('Skipping. No website.')
@@ -151,7 +157,11 @@ class InformationFinder:
                         value = helpers.findBetween(value, '', ',')
                         value = value.lower()
                     else:
-                        level = 1
+                        if helpers.listContainsSubstring(self.avoidSocialMediaUrls, value):
+                            logging.debug(f'Skipping. {value} is in avoidSocialMediaUrls.')
+                            continue
+
+                        level = 1                        
 
                         # because can have /user/xyz or /channel/xyz
                         if xpath[2] == 'youtube':
@@ -199,6 +209,9 @@ class InformationFinder:
     def isPhoneNumber(self, string):
         result = False
 
+        if ' - ' in string:
+            return result
+
         numbers = helpers.numbersOnly(string)
 
         if len(numbers) >= 7 and len(numbers) <= 15:
@@ -237,33 +250,60 @@ class InformationFinder:
         return result
 
     def addMediaLinks(self, company, domain):
-        # look for a pdf
-         company = self.addLink(f'site:{domain} pdf', company, domain, {})
+        logging.info('Looking for media links')
+
+        logging.info('Looking for pdf\'s')
+        company = self.addLink(f'site:{domain} pdf', company, domain, {})
 
         moreParameters = {
             'tbm': 'nws'
         }
 
-        # look for news
-        company = self.addLink(f'{get(company, "name")}', company, domain, moreParameters)
+        queryToUse = get(company, 'name')
+
+        # short names are likely to have false matches. so use domain instead.
+        if len(queryToUse) <= 8:
+            queryToUse = domain
+
+        logging.info('Looking for press releases')
+        company = self.addLink(f'{queryToUse}', company, domain, moreParameters)
 
         moreParameters = {
             'tbm': 'vid'
         }
 
-        # look for videos
-        company = self.addLink(f'{get(company, "name")}', company, domain, moreParameters)
+        logging.info('Looking for videos')
+        company = self.addLink(f'{queryToUse}', company, domain, moreParameters)
 
         return company
 
     def addLink(self, query, company, domain, moreParameters):
-        url = self.domainFinder.search(query, 1, True, moreParameters)
+        urls = self.domainFinder.search(query, 3, True, moreParameters)
 
-        if url != 'no results':
-            if not get(company, 'media links'):
-                company['media links'] = ''
+        website = get(company, 'website')
+        shortWebsite = helpers.findBetween(website, '//', '').replace('www.', '')
 
-            company['media links'] += ' ' + url
+        if not shortWebsite.endswith('/'):
+            shortWebsite += '/'
+
+        for url in urls:
+            # no point adding the link if it's simply the main page
+            shortUrl = helpers.findBetween(url, '//', '').replace('www.', '')
+
+            if not shortUrl.endswith('/'):
+                shortUrl += '/'
+
+            if shortUrl == shortWebsite:
+                continue
+
+            if url and url != 'no results':
+                if not get(company, 'media links'):
+                    company['media links'] = ''
+
+                company['media links'] += '\n' + url
+
+                logging.info(f'Found {url}')
+                break
 
         return company
     
@@ -280,6 +320,9 @@ class InformationFinder:
         for i, newItem in enumerate(newItems):
             for j, company in enumerate(get(newItem, 'companies')):
                 logging.info(f'Adding to result {i + 1} of {len(newItems)}. Company {j + 1} of {len(get(newItem, "companies"))}: {get(company, "name")}')
+
+                if self.isInOutputFile(company):
+                    continue
 
                 fields = ['city', 'region', 'country']
 
@@ -340,19 +383,23 @@ class InformationFinder:
         if not newItem:
             return
 
+        # fields for regular profiles
         fields = ['site', 'keyword', 'first name', 'last name', 'email', 'phone', 'headline', 'job title', 'company', 'summary', 'industry', 'location', 'country', 'positions', 'school', 'field of study', 'id', 'linkedin url']
 
-        # output to companies.csv too
-        companyFields = ['site', 'keyword', 'name', 'website', 'phone', 'city', 'region', 'country', 'address', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url', 'facebook', 'twitter', 'instagram', 'youtube']
+        # fields for companies
+        companyFields = ['site', 'keyword', 'name', 'website', 'phone', 'city', 'region', 'country', 'address', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url', 'facebook', 'twitter', 'instagram', 'youtube', 'media links']
 
-        companiesOutputFile = os.path.join(outputDirectory, 'companies.csv')
+        # put companies in companies.csv
+        if get(inputRow, 'search type') == 'companies' or self.linkedIn.isCompanyUrl(newItem):
+            self.toCsvFile(inputRow, newItem, companyFields, self.companiesOutputFile)
+        # put regular profiles in output.csv
+        else:
+            self.toCsvFile(inputRow, newItem, fields, self.outputFile)
+            
+            # put the list of companies from that profile in companies.csv
+            for company in get(newItem, 'companies'):
+                self.toCsvFile(inputRow, company, companyFields, self.companiesOutputFile)
 
-        for company in get(newItem, 'companies'):
-            self.toCsvFile(inputRow, company, companyFields, companiesOutputFile)
-
-        outputFile = os.path.join(outputDirectory, 'output.csv')
-
-        self.toCsvFile(inputRow, newItem, fields, outputFile)
 
     def toCsvFile(self, inputRow, newItem, fields, outputFile):
         helpers.makeDirectory(os.path.dirname(outputFile))
@@ -361,12 +408,7 @@ class InformationFinder:
         if not os.path.exists(outputFile):
             helpers.toFile(','.join(fields), outputFile)
 
-        file = helpers.getFile(outputFile)
-
-        id = newItem.get('id', '')
-
-        if id and f',{id},' in file:
-            logging.info(f'Skipping. {id} is already in the output file.')
+        if self.isInOutputFile(newItem):
             return
 
         values = [newItem.get('site', ''), inputRow.get('keyword', '')]
@@ -394,6 +436,23 @@ class InformationFinder:
         }
 
         self.database.insert('result', item)
+
+    def isInOutputFile(self, newItem):
+        result = False
+
+        files = [self.outputFile, self.companiesOutputFile]
+
+        for file in files:
+            fileContents = helpers.getFile(file)
+
+            id = newItem.get('id', '')
+
+            if id and f',{id},' in fileContents:
+                logging.info(f'Skipping. {id} is already in {helpers.fileNameOnly(file)}.')
+                result = True
+                break
+
+        return result
 
     def isDone(self, inputRow):
         result = False
@@ -499,5 +558,10 @@ class InformationFinder:
         self.linkedIn = LinkedIn(self.options, False, self.database)
         self.googleMaps = GoogleMaps(self.options, self.credentials, self.database)
         self.domainFinder = DomainFinder(self.options)
+        self.avoidSocialMediaUrls = ['facebook.com/sharer.php']
+
+        #debug
+        company = {}
+        self.getContactInformation(company, 'http://www.ubs.com/about')
 
         self.removeOldEntries()

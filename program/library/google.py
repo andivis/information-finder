@@ -44,7 +44,7 @@ class Google:
             self.captchaOnLastSearch = False
             return result
 
-        if 'google.' in page and 'did not match any documents' in page:
+        if 'google.' in page and 'did not match any ' in page:
             toDisplay = query.replace('+', ' ')
             logging.debug(f'No search results for {toDisplay}')
 

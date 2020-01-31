@@ -367,7 +367,14 @@ class DomainFinder:
             self.api.proxies = self.getRandomProxy()
 
             if self.urlContainsText(url, urlToFind, basicName):
-                matchingUrl = self.trimUrlToSubdirectory(url, 1)
+                level = 1
+
+                # because can have /user/xyz or /channel/xyz
+                if domain == 'youtube.com':
+                    level = 2
+
+                matchingUrl = self.trimUrlToSubdirectory(url, level)
+
                 score = 300
                 break        
 

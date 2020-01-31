@@ -96,6 +96,15 @@ def substringIsInList(list, s):
 
     return result
 
+def listContainsSubstring(list, s):
+    result = False
+
+    for item in list:
+        if s in item:
+            result = True
+            break
+
+    return result
 
 def numbersOnly(s):
     return ''.join(filter(lambda x: x.isdigit(), s))
