@@ -46,7 +46,7 @@ class Api:
 
             response = requests.get(self.urlPrefix + url, params=parameters, headers=self.headers, proxies=self.proxies, timeout=self.timeout, verify=verify)
 
-            self.handleResponseLog(url, response, fileName)
+            self.handleResponseLog(url, parameters, response, fileName)
             
             if responseIsJson:
                 result = json.loads(response.text)
@@ -88,7 +88,7 @@ class Api:
 
             response = requests.post(self.urlPrefix + url, headers=self.headers, proxies=self.proxies, data=data, timeout=self.timeout, verify=verify)
 
-            self.handleResponseLog(url, response, fileName)
+            self.handleResponseLog(url, parameters, response, fileName)
 
             if responseIsJson:
                 result = json.loads(response.text)
@@ -114,7 +114,7 @@ class Api:
         
         return result
 
-    def handleResponseLog(self, url, response, fileName):
+    def handleResponseLog(self, url, parameters, response, fileName):
         if not response:
             logging.debug(f'Something went wrong with the response. Response: {response}.')
             return
@@ -128,9 +128,13 @@ class Api:
             return
 
         if '--debug' in sys.argv:
-            helpers.toBinaryFile(response.content, fileName)
-            helpers.appendToFile(f'{fileName} {self.urlPrefix}{url}', 'user-data/logs/cache.txt')
+            parameterString = ''
+
+            if parameters:
+                parameterString += '?' + urllib.parse.urlencode(parameters)
             
+            helpers.toBinaryFile(response.content, fileName)
+            helpers.appendToFile(f'{fileName} {self.urlPrefix}{url}{parameterString}', 'user-data/logs/cache.txt')            
         # normal log
         else:
             number = '{:02d}'.format(self.requestIndex)

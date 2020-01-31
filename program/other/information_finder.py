@@ -214,6 +214,9 @@ class InformationFinder:
 
         numbers = helpers.numbersOnly(string)
 
+        if numbers.startswith('000'):
+            return result
+
         if len(numbers) >= 7 and len(numbers) <= 15:
             result = True
 
@@ -225,6 +228,7 @@ class InformationFinder:
         result = result.replace('(', '')
         result = result.replace(')', '')
         result = result.replace('*', '-')
+        result = result.replace('.', '-')
         result = helpers.squeeze(result, ['-'])
         result = helpers.squeezeWhitespace(result)
         result = result.strip()
@@ -357,7 +361,7 @@ class InformationFinder:
 
                 logging.info(f'Found matching result on Google Maps: {get(googleMapResult, "name")}')
 
-                toMerge = ['phone', 'url', 'google maps url']
+                toMerge = ['phone', 'address', 'url', 'google maps url']
 
                 # add if doesn't exist
                 for field in toMerge:
@@ -387,7 +391,7 @@ class InformationFinder:
         fields = ['site', 'keyword', 'first name', 'last name', 'email', 'phone', 'headline', 'job title', 'company', 'summary', 'industry', 'location', 'country', 'positions', 'school', 'field of study', 'id', 'linkedin url']
 
         # fields for companies
-        companyFields = ['site', 'keyword', 'name', 'website', 'phone', 'city', 'region', 'country', 'address', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url', 'facebook', 'twitter', 'instagram', 'youtube', 'media links']
+        companyFields = ['site', 'keyword', 'name', 'website', 'email', 'phone', 'city', 'region', 'country', 'address', 'headline', 'minimum employees', 'maximum employees', 'industry', 'company type', 'id', 'linkedin url', 'google maps url', 'facebook', 'twitter', 'instagram', 'youtube', 'media links']
 
         # put companies in companies.csv
         if get(inputRow, 'search type') == 'companies' or self.linkedIn.isCompanyUrl(newItem):
@@ -559,9 +563,5 @@ class InformationFinder:
         self.googleMaps = GoogleMaps(self.options, self.credentials, self.database)
         self.domainFinder = DomainFinder(self.options)
         self.avoidSocialMediaUrls = ['facebook.com/sharer.php']
-
-        #debug
-        company = {}
-        self.getContactInformation(company, 'http://www.ubs.com/about')
 
         self.removeOldEntries()
