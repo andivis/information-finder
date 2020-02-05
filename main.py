@@ -6,7 +6,7 @@ import program.library.helpers as helpers
 
 from program.library.helpers import get
 from program.library.database import Database
-from program.other.information_finder import InformationFinder
+from program.library.information_finder import InformationFinder
 
 class Main:
     def run(self):
@@ -74,7 +74,13 @@ class Main:
         self.database.execute('create table if not exists result ( site text, keyword text, id text, name text, gmDate text, json text, primary key(site, id) )')
         self.database.execute('create table if not exists history ( id integer primary key, keyword text, resultsFound integer, maximumNewResults integer, gmDate text )')
 
-        self.informationFinder = InformationFinder(self.options, self.database)
+        domainsToSearch = [
+            'linkedin.com',
+            'maps.google.com',
+            'google.com'
+        ]
+
+        self.informationFinder = InformationFinder(self.options, self.database, domainsToSearch)
 
 main = Main()
 main.run()

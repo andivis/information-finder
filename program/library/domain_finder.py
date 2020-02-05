@@ -9,12 +9,12 @@ import traceback
 import os
 import json
 
-from ..library import helpers
+from . import helpers
 
-from ..library.helpers import get
-from ..library.api import Api
-from ..library.website import Website
-from ..library.google import Google
+from .helpers import get
+from .api import Api
+from .website import Website
+from .google import Google
 
 class DomainFinder:
     def find(self, item):

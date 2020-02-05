@@ -8,15 +8,14 @@ import re
 # pip packages
 import lxml.html as lh
 
-from ..library import helpers
+from . import helpers
 
-from . domain_finder import DomainFinder
-
-from ..library.helpers import get
-from ..library.api import Api
-from ..library.website import Website
-from ..library.work import LinkedIn
-from ..library.google_maps import GoogleMaps
+from .helpers import get
+from .api import Api
+from .website import Website
+from .work import LinkedIn
+from .google_maps import GoogleMaps
+from .domain_finder import DomainFinder
 
 class InformationFinder:
     def run(self, inputRow, outputDirectory):

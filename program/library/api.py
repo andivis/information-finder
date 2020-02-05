@@ -88,7 +88,7 @@ class Api:
 
             response = requests.post(self.urlPrefix + url, headers=self.headers, proxies=self.proxies, data=data, timeout=self.timeout, verify=verify)
 
-            self.handleResponseLog(url, parameters, response, fileName)
+            self.handleResponseLog(url, {}, response, fileName)
 
             if responseIsJson:
                 result = json.loads(response.text)
@@ -324,5 +324,3 @@ class Api:
             import brotli
         except ImportError as e:
             helpers.handleException(e, 'You need to run "pip3 install brotlipy" or "pip install brotlipy" first, then restart this script')
-            input("Press enter to exit...")
-            exit()
